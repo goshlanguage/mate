@@ -17,35 +17,9 @@ use tda_sdk::{
 // mate makes use of the tda-sdk crate for access to a brokerage API
 // https://github.com/rideron89/tda-sdk-rs
 
-fn main() {
-    let mate = Mate::new();
-    println!("{}", mate.status());
-
-    loop {
-        let (ema20, err) = mate.ema("MSFT".to_string(), 20);
-        if err {
-            println!("error computing ema20");
-        }
-
-        let (ema50, err) = mate.ema("MSFT".to_string(), 50);
-        if err {
-            println!("error computing ema50");
-        }
-
-        if ema20 > ema50 {
-            println!("buy");
-        } else {
-            println!("sell");
-        }
-
-        thread::sleep(Duration::from_secs(60));
-    }
-}
-
-
 pub struct Mate {
     client: Client,
-    ema_cache: HashMap<String, String>,
+    ema_cache: HashMap<String, Vec<f64>>,
 }
 
 impl Mate {
@@ -101,7 +75,7 @@ impl Mate {
     //
     // returns computed ema as f64, and a bool if an error was encountered
     // TODO better error handling
-    fn ema(&self, symbol: String, period: i8) -> (f64, bool) {
+    fn ema(&mut self, symbol: &str, period: i8) -> (f64, bool) {
         if self.ema_cache.is_empty() {
             // https://developer.tdameritrade.com/price-history/apis/get/marketdata/%7Bsymbol%7D/pricehistory
             let params = GetPriceHistoryParams::default();
@@ -114,17 +88,44 @@ impl Mate {
                     return (0.0, true)
                 },
             };
-            println!("Price history for {}: {:?}", resp.symbol, resp);
 
-            for i in 0..resp.candles.len() {
+            // println!("Price history for {}: {:?}", resp.symbol, resp);
+
+            // TODO
+            // Calculate the SMA for the first 20 candles, using the 21st candle as the first candle to start
+            // producing an EMA using the SMA at index 20 for the first EMA calculation
+            //
+            // on the first iteration, set index 0 to the first candle's closing price to avoid a later potential divide by zero issue
+            self.ema_cache.insert(symbol.to_string(), vec![resp.candles.get(0).unwrap().close]);
+
+            for i in 1..resp.candles.len() {
                 let candle = resp.candles.get(i).unwrap();
 
-                println!("Close: {}", candle.close);
+                if i <= 20 {
+                    match self.ema_cache.get_mut(&symbol.to_string()) {
+                        Some(list) => { list.push(candle.close) },
+                        None => { panic!("Failed to use HashMap for EMA calculation after initial entry. Can not recover.") },
+                    }
+                } else {
+                    match self.ema_cache.get_mut(&symbol.to_string()) {
+                        Some(list) => {
+                            let smoothing_factor = 2.0;
+                            let multiplier = smoothing_factor / (1.0 + f64::from(period));
+                            let ema = (candle.close * multiplier) + (list[i-1] * (1.0 - multiplier));
+                            list.push(ema)
+                        },
+                        None => { panic!("Failed to use HashMap for EMA calculation after initial entry. Can not recover.") },
+                    }
+                }
             }
+
         }
 
-
-        return (0.0, true);
+        match self.ema_cache.get_mut(&symbol.to_string()) {
+            Some(list) => {
+                return (list[list.len()-1], false) },
+            None => { return (0.0, true) },
+        }
     }
 }
 
@@ -141,4 +142,30 @@ fn get_creds() -> (String, String) {
     };
 
     return (client_id, refresh_token)
+}
+
+fn main() {
+    let mut mate = Mate::new();
+    println!("{}", mate.status());
+
+    loop {
+        let (ema20, err) = mate.ema("MSFT", 20);
+        if err {
+            println!("error computing ema20");
+        }
+
+        let (ema50, err) = mate.ema("MSFT", 50);
+        if err {
+            println!("error computing ema50");
+        }
+
+        println!("Calculated EMA20: {}\tEMA50: {}", ema20, ema50);
+        if ema20 > ema50 {
+            println!("buy");
+        } else {
+            println!("sell");
+        }
+
+        thread::sleep(Duration::from_secs(60));
+    }
 }
