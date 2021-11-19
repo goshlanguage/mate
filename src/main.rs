@@ -133,8 +133,11 @@ impl Mate {
             },
         };
 
-        let start_time = resp.candles[0].datetime as i64;
-        let end_time = resp.candles[resp.candles.len()-1].datetime as i64;
+        let start_ms = resp.candles[0].datetime as i64;
+        let end_ms = resp.candles[resp.candles.len()-1].datetime as i64;
+
+        let start_time = start_ms / 1000;
+        let end_time = end_ms / 1000;
 
         let naive_start = NaiveDateTime::from_timestamp(start_time, 0);
         let naive_end = NaiveDateTime::from_timestamp(end_time, 0);
@@ -146,6 +149,7 @@ impl Mate {
         let readable_end = datetime_end.to_rfc2822();
 
         println!("Gathered candle data for {} between {} and {}", resp.symbol, readable_start, readable_end);
+        println!("Candle data contains {} candles", resp.candles.len());
 
         self.candles = resp.candles;
     }
