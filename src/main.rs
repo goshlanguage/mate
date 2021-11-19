@@ -115,10 +115,10 @@ impl Mate {
         // let params = GetPriceHistoryParams::default();
         let params = GetPriceHistoryParams{
             end_date: None,
-            frequency_type: None,
-            frequency: None,
-            need_extended_hours_data: None,
-            period_type: Some(String::from("day")),
+            frequency_type: Some(String::from("daily")),
+            frequency: Some(String::from("1")),
+            need_extended_hours_data: Some(false),
+            period_type: Some(String::from("year")),
             period: Some(String::from("1")),
             start_date: None,
         };
