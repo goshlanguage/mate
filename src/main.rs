@@ -112,12 +112,11 @@ impl Mate {
 
     fn refresh_candles(&mut self) {
         // https://developer.tdameritrade.com/price-history/apis/get/marketdata/%7Bsymbol%7D/pricehistory
-        // let params = GetPriceHistoryParams::default();
         let params = GetPriceHistoryParams{
             end_date: None,
             frequency_type: Some(String::from("daily")),
             frequency: Some(String::from("1")),
-            need_extended_hours_data: Some(false),
+            need_extended_hours_data: None,
             period_type: Some(String::from("year")),
             period: Some(String::from("1")),
             start_date: None,
