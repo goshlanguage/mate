@@ -28,7 +28,7 @@ Configuration is passed in through environment only currently:
 
 ### TD Ameritrade Setup
 
-To register an account and get API access, you can either see [upstream documentation](https://developer.tdameritrade.com/content/getting-started#createAccount), or follow the steps below:
+To register an account and get API access, you can either see [upstream documentation](https://developer.tdameritrade.com/content/getting-started#createAccount), or try your luck with the steps below:
 
 - [Sign up](https://developer.tdameritrade.com/user/register) for a developer account, even if you have a brokerage account
 - [Create your application](https://developer.tdameritrade.com/user/me/apps/add) (if you plan to run this locally, use `http://localhost` or `http://127.0.0.1` for the `redirect_url`)

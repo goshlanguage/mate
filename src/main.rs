@@ -11,6 +11,7 @@ use tda_sdk::{
     Client,
     params::GetAccountsParams,
     params::GetPriceHistoryParams,
+    responses::Candle,
     responses::SecuritiesAccount,
 };
 
@@ -20,6 +21,8 @@ use tda_sdk::{
 pub struct Mate {
     client: Client,
     ema_cache: HashMap<String, Vec<f64>>,
+    candles: Vec<Candle>,
+    symbols: Vec<String>
 }
 
 impl Mate {
@@ -44,6 +47,8 @@ impl Mate {
         return Mate{
             client: client,
             ema_cache: HashMap::new(),
+            candles: vec![],
+            symbols: vec![],
         }
     }
 
@@ -70,62 +75,65 @@ impl Mate {
     // symbol - ticker symbol of the security you want to query
     // period - number in days to grab info for
     //
-    // ema first checks the ema cache, and if unpopulated, computes a table of ema for as many candles as we get back
-    // then returns the last element of the ema cache, which should be the most recent.
-    //
-    // returns computed ema as f64, and a bool if an error was encountered
-    // TODO better error handling
-    fn ema(&mut self, symbol: &str, period: i8) -> (f64, bool) {
-        if self.ema_cache.is_empty() {
-            // https://developer.tdameritrade.com/price-history/apis/get/marketdata/%7Bsymbol%7D/pricehistory
-            let params = GetPriceHistoryParams::default();
-            let history = self.client.get_price_history(&symbol, params);
+    // returns computed ema as f64
+    fn ema(&mut self, symbol: &str, period: i32) -> f64 {
 
-            let resp = match history {
-                Ok(val) => val,
-                Err(e) => {
-                    println!("Failed to get price history: {}", e.to_string());
-                    return (0.0, true)
-                },
-            };
+        let candle_len = self.candles.len();
+        let sma_i =  candle_len - ( 2 * period as usize );
+        let sma_e = candle_len - period as usize;
 
-            // println!("Price history for {}: {:?}", resp.symbol, resp);
+        let base_case = self.sma(symbol, sma_i as usize, sma_e as usize);
 
-            // TODO
-            // Calculate the SMA for the first 20 candles, using the 21st candle as the first candle to start
-            // producing an EMA using the SMA at index 20 for the first EMA calculation
-            //
-            // on the first iteration, set index 0 to the first candle's closing price to avoid a later potential divide by zero issue
-            self.ema_cache.insert(symbol.to_string(), vec![resp.candles.get(0).unwrap().close]);
 
-            for i in 1..resp.candles.len() {
-                let candle = resp.candles.get(i).unwrap();
+        let close = self.candles[self.candles.len()-1].close;
+        let smoothing_factor = 2.0;
+        let multiplier = smoothing_factor / (1.0 + f64::from(period));
+        let ema1 = (close * multiplier) + (base_case * (1.0 - multiplier));
 
-                if i <= 20 {
-                    match self.ema_cache.get_mut(&symbol.to_string()) {
-                        Some(list) => { list.push(candle.close) },
-                        None => { panic!("Failed to use HashMap for EMA calculation after initial entry. Can not recover.") },
-                    }
-                } else {
-                    match self.ema_cache.get_mut(&symbol.to_string()) {
-                        Some(list) => {
-                            let smoothing_factor = 2.0;
-                            let multiplier = smoothing_factor / (1.0 + f64::from(period));
-                            let ema = (candle.close * multiplier) + (list[i-1] * (1.0 - multiplier));
-                            list.push(ema)
-                        },
-                        None => { panic!("Failed to use HashMap for EMA calculation after initial entry. Can not recover.") },
-                    }
-                }
-            }
+        let emas = vec![ema1];
+        // EMA = Closing price x multiplier + EMA (previous day) x (1-multiplier)
+        return emas[emas.len()-1]
+    }
 
+    fn sma(&mut self, symbol: &str, start: usize, end: usize) -> f64 {
+        println!("Calculating SMA for {} from {} to {}", symbol, start, end);
+
+        let mut sum = 0.0;
+
+        for i in start..end {
+            let i_usize = i as usize;
+            sum += self.candles[self.candles.len()-1-i_usize].close;
         }
 
-        match self.ema_cache.get_mut(&symbol.to_string()) {
-            Some(list) => {
-                return (list[list.len()-1], false) },
-            None => { return (0.0, true) },
-        }
+        let difference = (end - start) as f64;
+        let average = sum / difference;
+        return average
+    }
+
+    fn refresh_candles(&mut self) {
+        // https://developer.tdameritrade.com/price-history/apis/get/marketdata/%7Bsymbol%7D/pricehistory
+        // let params = GetPriceHistoryParams::default();
+        let params = GetPriceHistoryParams{
+            end_date: None,
+            frequency_type: None,
+            frequency: None,
+            need_extended_hours_data: None,
+            period_type: Some(String::from("day")),
+            period: Some(String::from("1")),
+            start_date: None,
+        };
+
+        let history = self.client.get_price_history(&self.symbols[0].to_owned(), params);
+
+        let resp = match history {
+            Ok(val) => val,
+            Err(e) => {
+                println!("Failed to get price history: {}", e.to_string());
+                return
+            },
+        };
+
+        self.candles = resp.candles;
     }
 }
 
@@ -148,16 +156,20 @@ fn main() {
     let mut mate = Mate::new();
     println!("{}", mate.status());
 
-    loop {
-        let (ema20, err) = mate.ema("MSFT", 20);
-        if err {
-            println!("error computing ema20");
-        }
+    mate.symbols = vec!["MSFT".to_string()];
 
-        let (ema50, err) = mate.ema("MSFT", 50);
-        if err {
-            println!("error computing ema50");
-        }
+    loop {
+        // ensure that data we're watching is fetched
+        mate.refresh_candles();
+
+        let sma20 = mate.sma("MSFT", 0, 20);
+        let sma50 = mate.sma("MSFT", 0, 50);
+        let sma100 = mate.sma("MSFT", 0, 100);
+
+        println!("Calculated SMA20: {}\tSMA50: {}\tSMA100: {}", sma20, sma50, sma100);
+
+        let ema20 = mate.ema("MSFT", 20);
+        let ema50 = mate.ema("MSFT", 50);
 
         println!("Calculated EMA20: {}\tEMA50: {}", ema20, ema50);
         if ema20 > ema50 {
