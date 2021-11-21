@@ -1,7 +1,7 @@
 use chrono::Utc;
 use chrono::prelude::*;
+use math::round;
 use std::{
-    collections::HashMap,
     env,
     thread,
     time::Duration,
@@ -20,7 +20,6 @@ use tda_sdk::{
 
 pub struct Mate {
     client: Client,
-    ema_cache: HashMap<String, Vec<f64>>,
     candles: Vec<Candle>,
     symbols: Vec<String>
 }
@@ -46,7 +45,6 @@ impl Mate {
 
         return Mate{
             client: client,
-            ema_cache: HashMap::new(),
             candles: vec![],
             symbols: vec![],
         }
@@ -75,29 +73,34 @@ impl Mate {
     // symbol - ticker symbol of the security you want to query
     // period - number in days to grab info for
     //
+    // TODO Fix no boundary checking
     // returns computed ema as f64
     fn ema(&mut self, symbol: &str, period: i32) -> f64 {
 
-        let candle_len = self.candles.len();
-        let sma_i =  candle_len - ( 2 * period as usize );
-        let sma_e = candle_len - period as usize;
+        let sma_i =  (period + 1) as usize;
+        let sma_e = (2 * period + 1) as usize;
 
         let base_case = self.sma(symbol, sma_i as usize, sma_e as usize);
 
-
-        let close = self.candles[self.candles.len()-1].close;
+        let close = self.candles[self.candles.len()-(period as usize)].close;
         let smoothing_factor = 2.0;
         let multiplier = smoothing_factor / (1.0 + f64::from(period));
-        let ema1 = (close * multiplier) + (base_case * (1.0 - multiplier));
+        let ema0 = round::ceil((close * multiplier) + (base_case * (1.0 - multiplier)), 2);
 
-        let emas = vec![ema1];
+        let mut emas = vec![ema0];
         // EMA = Closing price x multiplier + EMA (previous day) x (1-multiplier)
+        for i in 0..period {
+            let close = self.candles[self.candles.len()-((period - i) as usize)].close;
+            let previous_ema = emas[i as usize];
+
+            let ema_i = (close * multiplier) + (previous_ema * (1.0 - multiplier));
+            emas.push(round::ceil(ema_i, 2));
+        }
+
         return emas[emas.len()-1]
     }
 
     fn sma(&mut self, symbol: &str, start: usize, end: usize) -> f64 {
-        println!("Calculating SMA for {} from {} to {}", symbol, start, end);
-
         let mut sum = 0.0;
 
         for i in start..end {
@@ -107,7 +110,7 @@ impl Mate {
 
         let difference = (end - start) as f64;
         let average = sum / difference;
-        return average
+        return round::ceil(average, 2)
     }
 
     fn refresh_candles(&mut self) {
@@ -147,9 +150,6 @@ impl Mate {
         let readable_start = datetime_start.to_rfc2822();
         let readable_end = datetime_end.to_rfc2822();
 
-        println!("Gathered candle data for {} between {} and {}", resp.symbol, readable_start, readable_end);
-        println!("Candle data contains {} candles", resp.candles.len());
-
         self.candles = resp.candles;
     }
 }
@@ -183,12 +183,12 @@ fn main() {
         let sma50 = mate.sma("MSFT", 0, 50);
         let sma100 = mate.sma("MSFT", 0, 100);
 
-        println!("Calculated SMA20: {}\tSMA50: {}\tSMA100: {}", sma20, sma50, sma100);
+        println!("SMA20: {}\tSMA50: {}\tSMA100: {}", sma20, sma50, sma100);
 
         let ema20 = mate.ema("MSFT", 20);
         let ema50 = mate.ema("MSFT", 50);
 
-        println!("Calculated EMA20: {}\tEMA50: {}", ema20, ema50);
+        println!("EMA20: {}\tEMA50: {}", ema20, ema50);
         if ema20 > ema50 {
             println!("buy");
         } else {
