@@ -7,5 +7,6 @@ edition = "2018"
 
 [dependencies]
 chrono = "0.4.19"
-libmath = "0.1.4"
+rust_decimal = "1.17"
+rust_decimal_macros = "1.17"
 tda-sdk = "0.1.1"

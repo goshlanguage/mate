@@ -1,11 +1,14 @@
 use chrono::Utc;
 use chrono::prelude::*;
-use math::round;
+
 use std::{
     env,
     thread,
     time::Duration,
 };
+
+use std::collections::HashMap;
+
 use tda_sdk::{
     AccessToken,
     Client,
@@ -20,7 +23,7 @@ use tda_sdk::{
 
 pub struct Mate {
     client: Client,
-    candles: Vec<Candle>,
+    candles: HashMap<String, Vec<Candle>>,
     symbols: Vec<String>
 }
 
@@ -45,7 +48,7 @@ impl Mate {
 
         return Mate{
             client: client,
-            candles: vec![],
+            candles: HashMap::new(),
             symbols: vec![],
         }
     }
@@ -73,28 +76,33 @@ impl Mate {
     // symbol - ticker symbol of the security you want to query
     // period - number in days to grab info for
     //
+    // You can cross check https://www.tradingview.com/symbols/$exchange-$symbol/technicals/ for validity/manual checking
+    // eg: https://www.tradingview.com/symbols/NASDAQ-MSFT/technicals/
+    //
     // TODO Fix no boundary checking
+    // TODO check for NaN
     // returns computed ema as f64
     fn ema(&mut self, symbol: &str, period: i32) -> f64 {
 
-        let sma_i =  (period + 1) as usize;
-        let sma_e = (2 * period + 1) as usize;
-
+        let sma_i =  (period) as usize;
+        let sma_e = (2 * period) as usize;
         let base_case = self.sma(symbol, sma_i as usize, sma_e as usize);
 
-        let close = self.candles[self.candles.len()-(period as usize)].close;
+        let len_candles = self.candles[symbol.clone()].len();
+        let close = self.candles[symbol.clone()][len_candles-(period as usize)].close;
         let smoothing_factor = 2.0;
         let multiplier = smoothing_factor / (1.0 + f64::from(period));
-        let ema0 = round::ceil((close * multiplier) + (base_case * (1.0 - multiplier)), 2);
+        let ema0 = round((close - base_case) * multiplier + base_case);
 
         let mut emas = vec![ema0];
         // EMA = Closing price x multiplier + EMA (previous day) x (1-multiplier)
         for i in 0..period {
-            let close = self.candles[self.candles.len()-((period - i) as usize)].close;
+            let len_candles = self.candles[symbol.clone()].len();
+            let close = self.candles[symbol.clone()][len_candles-((period - i) as usize)].close;
             let previous_ema = emas[i as usize];
 
-            let ema_i = (close * multiplier) + (previous_ema * (1.0 - multiplier));
-            emas.push(round::ceil(ema_i, 2));
+            let ema_i = round((close - previous_ema) * multiplier + previous_ema);
+            emas.push(ema_i);
         }
 
         return emas[emas.len()-1]
@@ -105,52 +113,59 @@ impl Mate {
 
         for i in start..end {
             let i_usize = i as usize;
-            sum += self.candles[self.candles.len()-1-i_usize].close;
+            sum += self.candles[symbol.clone()][self.candles[symbol.clone()].len()-1-i_usize].close;
         }
 
         let difference = (end - start) as f64;
         let average = sum / difference;
-        return round::ceil(average, 2)
+        return round(average)
     }
 
     fn refresh_candles(&mut self) {
-        // https://developer.tdameritrade.com/price-history/apis/get/marketdata/%7Bsymbol%7D/pricehistory
-        let params = GetPriceHistoryParams{
-            end_date: None,
-            frequency_type: Some(String::from("daily")),
-            frequency: Some(String::from("1")),
-            need_extended_hours_data: None,
-            period_type: Some(String::from("year")),
-            period: Some(String::from("1")),
-            start_date: None,
-        };
 
-        let history = self.client.get_price_history(&self.symbols[0].to_owned(), params);
+        for symbol in self.symbols.clone() {
+            // https://developer.tdameritrade.com/price-history/apis/get/marketdata/%7Bsymbol%7D/pricehistory
+            let params = GetPriceHistoryParams{
+                end_date: None,
+                frequency_type: Some(String::from("daily")),
+                frequency: Some(String::from("1")),
+                need_extended_hours_data: None,
+                period_type: Some(String::from("year")),
+                period: Some(String::from("1")),
+                start_date: None,
+            };
 
-        let resp = match history {
-            Ok(val) => val,
-            Err(e) => {
-                println!("Failed to get price history: {}", e.to_string());
-                return
-            },
-        };
+            let history = self.client.get_price_history(&symbol, params);
 
-        let start_ms = resp.candles[0].datetime as i64;
-        let end_ms = resp.candles[resp.candles.len()-1].datetime as i64;
+            let resp = match history {
+                Ok(val) => val,
+                Err(e) => {
+                    println!("Failed to get price history: {}", e.to_string());
+                    return
+                },
+            };
 
-        let start_time = start_ms / 1000;
-        let end_time = end_ms / 1000;
+            self.candles.insert(symbol, resp.candles);
+        }
 
-        let naive_start = NaiveDateTime::from_timestamp(start_time, 0);
-        let naive_end = NaiveDateTime::from_timestamp(end_time, 0);
 
-        let datetime_start: DateTime<Utc> = DateTime::from_utc(naive_start, Utc);
-        let datetime_end: DateTime<Utc> = DateTime::from_utc(naive_end, Utc);
+        // let start_ms = resp.candles[0].datetime as i64;
+        // let end_ms = resp.candles[resp.candles.len()-1].datetime as i64;
 
-        let readable_start = datetime_start.to_rfc2822();
-        let readable_end = datetime_end.to_rfc2822();
+        // let start_time = start_ms / 1000;
+        // let end_time = end_ms / 1000;
 
-        self.candles = resp.candles;
+        // let naive_start = NaiveDateTime::from_timestamp(start_time, 0);
+        // let naive_end = NaiveDateTime::from_timestamp(end_time, 0);
+
+        // let datetime_start: DateTime<Utc> = DateTime::from_utc(naive_start, Utc);
+        // let datetime_end: DateTime<Utc> = DateTime::from_utc(naive_end, Utc);
+
+        // let readable_start = datetime_start.to_rfc2822();
+        // let readable_end = datetime_end.to_rfc2822();
+
+        // println!("Gathered candle data for {} between {} and {}", resp.symbol, readable_start, readable_end);
+        // println!("Candle data contains {} candles", resp.candles.len());
     }
 }
 
@@ -167,6 +182,11 @@ fn get_creds() -> (String, String) {
     };
 
     return (client_id, refresh_token)
+}
+
+// round is a helper for f64 that rounds the number to a decimal point notation used for representing money
+fn round(i: f64) -> f64 {
+    return (i * 100.0).round() / 100.0
 }
 
 fn main() {
@@ -188,13 +208,22 @@ fn main() {
         let ema20 = mate.ema("MSFT", 20);
         let ema50 = mate.ema("MSFT", 50);
 
+        // TODO Check for NaN values to ensure we don't submit a faulty order
         println!("EMA20: {}\tEMA50: {}", ema20, ema50);
-        if ema20 > ema50 {
-            println!("buy");
-        } else {
-            println!("sell");
+        if ema20 > 0.0 && ema50 > 0.0 {
+            if ema20 > ema50 {
+                println!("buy");
+                println!("set stop loss at 95%");
+            } else {
+                    println!("sell");
+            }
         }
 
-        thread::sleep(Duration::from_secs(60));
+        println!();
+
+        // sleep for an hour, as not to miss any trading window
+        let hour = Duration::from_secs(60 * 60);
+        // let day = Duration::from_secs(60 * 60 * 24);
+        thread::sleep(hour);
     }
 }
