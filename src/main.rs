@@ -1,53 +1,32 @@
-use chrono::Utc;
-use chrono::prelude::*;
-
-use std::{
-    env,
-    thread,
-    time::Duration,
-};
+use std::{env, thread, time::Duration};
 
 use std::collections::HashMap;
 
 use tda_sdk::{
-    AccessToken,
-    Client,
-    params::GetAccountsParams,
-    params::GetPriceHistoryParams,
-    responses::Candle,
-    responses::SecuritiesAccount,
+    params::GetAccountsParams, params::GetPriceHistoryParams, responses::Candle,
+    responses::SecuritiesAccount, Client,
 };
+
+mod ta;
 
 // mate makes use of the tda-sdk crate for access to a brokerage API
 // https://github.com/rideron89/tda-sdk-rs
-
 pub struct Mate {
     client: Client,
     candles: HashMap<String, Vec<Candle>>,
-    symbols: Vec<String>
+    symbols: Vec<String>,
 }
 
 impl Mate {
-    pub fn new() -> Self {
+    pub fn default() -> Self {
         let (client_id, refresh_token) = get_creds();
         let mut client = Client::new(&client_id, &refresh_token, None);
 
-        let access_token: AccessToken = client.get_access_token().unwrap().into();
+        let response = client.get_access_token().unwrap();
+        client.set_access_token(&Some(response.into()));
 
-        // TODO
-        // this function seems to not work currently
-        // This needs a working expiry check, so when expired, a token can be refreshed
-        if access_token.has_expired() {
-            let _dt = Utc.timestamp(access_token.expires_at, 0);
-            let _now = Utc::now();
-            // println!("Current access token is supposedly expired!\nCurrent time: {}", now.to_rfc2822());
-            // println!("Access token expiry: {}", dt.to_rfc2822())
-        }
-
-        client.set_access_token(&Some(access_token.into()));
-
-        return Mate{
-            client: client,
+        Mate {
+            client,
             candles: HashMap::new(),
             symbols: vec![],
         }
@@ -57,75 +36,43 @@ impl Mate {
     pub fn status(&self) -> String {
         let mut status = String::new();
 
-        let accounts = self.client.get_accounts(GetAccountsParams::default()).unwrap();
+        let accounts = self
+            .client
+            .get_accounts(GetAccountsParams::default())
+            .unwrap();
+
+        if accounts.len() > 1 {
+            panic!("Encountered more than 1 TD Ameritrade account. Sorry, this isn't currently supported properly.")
+        }
 
         for account in accounts {
             match account.securities_account {
-                SecuritiesAccount::MarginAccount { is_day_trader, projected_balances, .. } => {
-                    // status = format!("{}Account ID: {}\n", status, account_id);
-                    // status = format!("{}Account Type: {}\n", status, r#type);
-                    status = format!("{}Account Balance: ${}\n", status, projected_balances.cash_available_for_withdrawal);
-                    status = format!("{}Account DayTrader: {}\n", status, is_day_trader);
+                SecuritiesAccount::MarginAccount {
+                    current_balances,
+                    projected_balances,
+                    ..
+                } => {
+                    status = format!(
+                        "{}Account Balance: ${}\n",
+                        status, current_balances.cash_balance
+                    );
+                    status = format!(
+                        "{}Available Balance: ${}\n",
+                        status, projected_balances.cash_available_for_trading
+                    );
                 }
             }
         }
-        return status.to_string()
+
+        println!("Watching: {:?}", self.symbols);
+
+        status
     }
 
-    // https://www.investopedia.com/terms/e/ema.asp
-    // symbol - ticker symbol of the security you want to query
-    // period - number in days to grab info for
-    //
-    // You can cross check https://www.tradingview.com/symbols/$exchange-$symbol/technicals/ for validity/manual checking
-    // eg: https://www.tradingview.com/symbols/NASDAQ-MSFT/technicals/
-    //
-    // TODO Fix no boundary checking
-    // TODO check for NaN
-    // returns computed ema as f64
-    fn ema(&mut self, symbol: &str, period: i32) -> f64 {
-
-        let sma_i =  (period) as usize;
-        let sma_e = (2 * period) as usize;
-        let base_case = self.sma(symbol, sma_i as usize, sma_e as usize);
-
-        let len_candles = self.candles[symbol.clone()].len();
-        let close = self.candles[symbol.clone()][len_candles-(period as usize)].close;
-        let smoothing_factor = 2.0;
-        let multiplier = smoothing_factor / (1.0 + f64::from(period));
-        let ema0 = round((close - base_case) * multiplier + base_case);
-
-        let mut emas = vec![ema0];
-        // EMA = Closing price x multiplier + EMA (previous day) x (1-multiplier)
-        for i in 0..period {
-            let len_candles = self.candles[symbol.clone()].len();
-            let close = self.candles[symbol.clone()][len_candles-((period - i) as usize)].close;
-            let previous_ema = emas[i as usize];
-
-            let ema_i = round((close - previous_ema) * multiplier + previous_ema);
-            emas.push(ema_i);
-        }
-
-        return emas[emas.len()-1]
-    }
-
-    fn sma(&mut self, symbol: &str, start: usize, end: usize) -> f64 {
-        let mut sum = 0.0;
-
-        for i in start..end {
-            let i_usize = i as usize;
-            sum += self.candles[symbol.clone()][self.candles[symbol.clone()].len()-1-i_usize].close;
-        }
-
-        let difference = (end - start) as f64;
-        let average = sum / difference;
-        return round(average)
-    }
-
-    fn refresh_candles(&mut self) {
-
-        for symbol in self.symbols.clone() {
+    fn update(&mut self) {
+        for symbol in self.symbols.to_vec() {
             // https://developer.tdameritrade.com/price-history/apis/get/marketdata/%7Bsymbol%7D/pricehistory
-            let params = GetPriceHistoryParams{
+            let params = GetPriceHistoryParams {
                 end_date: None,
                 frequency_type: Some(String::from("daily")),
                 frequency: Some(String::from("1")),
@@ -141,13 +88,12 @@ impl Mate {
                 Ok(val) => val,
                 Err(e) => {
                     println!("Failed to get price history: {}", e.to_string());
-                    return
-                },
+                    return;
+                }
             };
 
             self.candles.insert(symbol, resp.candles);
         }
-
 
         // let start_ms = resp.candles[0].datetime as i64;
         // let end_ms = resp.candles[resp.candles.len()-1].datetime as i64;
@@ -173,40 +119,42 @@ impl Mate {
 fn get_creds() -> (String, String) {
     let client_id = match env::var("TDA_CLIENT_ID") {
         Ok(val) => val,
-        Err(e) => panic!("Didn't find the TDA_CLIENT_ID env var, please set this and try again. {}", e)
+        Err(e) => panic!(
+            "Didn't find the TDA_CLIENT_ID env var, please set this and try again. {}",
+            e
+        ),
     };
 
     let refresh_token = match env::var("TDA_REFRESH_TOKEN") {
         Ok(val) => val,
-        Err(e) => panic!("Didn't find the TDA_REFRESH_TOKEN env var, please set this and try again. {}", e),
+        Err(e) => panic!(
+            "Didn't find the TDA_REFRESH_TOKEN env var, please set this and try again. {}",
+            e
+        ),
     };
 
-    return (client_id, refresh_token)
-}
-
-// round is a helper for f64 that rounds the number to a decimal point notation used for representing money
-fn round(i: f64) -> f64 {
-    return (i * 100.0).round() / 100.0
+    (client_id, refresh_token)
 }
 
 fn main() {
-    let mut mate = Mate::new();
-    println!("{}", mate.status());
+    let mut mate = Mate::default();
 
     mate.symbols = vec!["MSFT".to_string()];
 
     loop {
         // ensure that data we're watching is fetched
-        mate.refresh_candles();
+        mate.update();
+        println!("{}", mate.status());
 
-        let sma20 = mate.sma("MSFT", 0, 20);
-        let sma50 = mate.sma("MSFT", 0, 50);
-        let sma100 = mate.sma("MSFT", 0, 100);
+        let mr_soft_candles = mate.candles.get("MSFT").unwrap();
+        let sma20 = ta::sma(mr_soft_candles, 0, 20);
+        let sma50 = ta::sma(mr_soft_candles, 0, 50);
+        let sma100 = ta::sma(mr_soft_candles, 0, 100);
 
         println!("SMA20: {}\tSMA50: {}\tSMA100: {}", sma20, sma50, sma100);
 
-        let ema20 = mate.ema("MSFT", 20);
-        let ema50 = mate.ema("MSFT", 50);
+        let ema20 = ta::ema(mr_soft_candles, 20);
+        let ema50 = ta::ema(mr_soft_candles, 50);
 
         // TODO Check for NaN values to ensure we don't submit a faulty order
         println!("EMA20: {}\tEMA50: {}", ema20, ema50);
@@ -215,7 +163,7 @@ fn main() {
                 println!("buy");
                 println!("set stop loss at 95%");
             } else {
-                    println!("sell");
+                println!("sell");
             }
         }
 
