@@ -1,12 +1,20 @@
-use std::{env, thread, time::Duration};
+use std::{
+    env,
+    thread,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 
 use std::collections::HashMap;
 
 use tda_sdk::{
-    params::GetAccountsParams, params::GetPriceHistoryParams, responses::Candle,
-    responses::SecuritiesAccount, Client,
+    Client,
+    params::GetAccountsParams,
+    params::GetPriceHistoryParams,
+    responses::Candle,
+    responses::SecuritiesAccount,
 };
 
+mod datafeed;
 mod ta;
 
 // mate makes use of the tda-sdk crate for access to a brokerage API
@@ -14,7 +22,7 @@ mod ta;
 pub struct Mate {
     client: Client,
     candles: HashMap<String, Vec<Candle>>,
-    symbols: Vec<String>,
+    symbols: Vec<String>
 }
 
 impl Mate {
@@ -25,7 +33,7 @@ impl Mate {
         let response = client.get_access_token().unwrap();
         client.set_access_token(&Some(response.into()));
 
-        Mate {
+        Mate{
             client,
             candles: HashMap::new(),
             symbols: vec![],
@@ -36,10 +44,7 @@ impl Mate {
     pub fn status(&self) -> String {
         let mut status = String::new();
 
-        let accounts = self
-            .client
-            .get_accounts(GetAccountsParams::default())
-            .unwrap();
+        let accounts = self.client.get_accounts(GetAccountsParams::default()).unwrap();
 
         if accounts.len() > 1 {
             panic!("Encountered more than 1 TD Ameritrade account. Sorry, this isn't currently supported properly.")
@@ -47,19 +52,9 @@ impl Mate {
 
         for account in accounts {
             match account.securities_account {
-                SecuritiesAccount::MarginAccount {
-                    current_balances,
-                    projected_balances,
-                    ..
-                } => {
-                    status = format!(
-                        "{}Account Balance: ${}\n",
-                        status, current_balances.cash_balance
-                    );
-                    status = format!(
-                        "{}Available Balance: ${}\n",
-                        status, projected_balances.cash_available_for_trading
-                    );
+                SecuritiesAccount::MarginAccount { current_balances, projected_balances, .. } => {
+                    status = format!("{}Account Balance: ${}\n", status, current_balances.cash_balance);
+                    status = format!("{}Available Balance: ${}\n", status, projected_balances.cash_available_for_trading);
                 }
             }
         }
@@ -69,10 +64,11 @@ impl Mate {
         status
     }
 
-    fn update(&mut self) {
+    fn refresh_candles(&mut self) {
+
         for symbol in self.symbols.to_vec() {
             // https://developer.tdameritrade.com/price-history/apis/get/marketdata/%7Bsymbol%7D/pricehistory
-            let params = GetPriceHistoryParams {
+            let params = GetPriceHistoryParams{
                 end_date: None,
                 frequency_type: Some(String::from("daily")),
                 frequency: Some(String::from("1")),
@@ -88,12 +84,47 @@ impl Mate {
                 Ok(val) => val,
                 Err(e) => {
                     println!("Failed to get price history: {}", e.to_string());
-                    return;
-                }
+                    return
+                },
             };
 
-            self.candles.insert(symbol, resp.candles);
+            // TODO
+            // this hacky work around ONLY works for the first iteration, then will fail on all subsequent iterations
+            // without first popping the latest appended last candle off of self.candles.
+            // Fix this when moved into datafeed
+            let now = SystemTime::now();
+            let epoch = now
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_millis();
+
+            let last_session_params = GetPriceHistoryParams{
+                end_date: Some(epoch.to_string()),
+                frequency_type: None,
+                frequency: None,
+                need_extended_hours_data: Some(false),
+                period_type: None,
+                period: None,
+                start_date: Some(epoch.to_string()),
+            };
+
+            let last_session_history = self.client.get_price_history(&symbol, last_session_params);
+
+            let last_resp = match last_session_history {
+                Ok(val) => val,
+                Err(e) => {
+                    println!("Failed to get price history: {}", e.to_string());
+                    return
+                },
+            };
+
+            let mut candles = resp.candles;
+            let mut last_candles = last_resp.candles;
+            let last_candle = last_candles.pop().unwrap();
+            candles.push(last_candle);
+            self.candles.insert(symbol, candles);
         }
+
 
         // let start_ms = resp.candles[0].datetime as i64;
         // let end_ms = resp.candles[resp.candles.len()-1].datetime as i64;
@@ -119,18 +150,12 @@ impl Mate {
 fn get_creds() -> (String, String) {
     let client_id = match env::var("TDA_CLIENT_ID") {
         Ok(val) => val,
-        Err(e) => panic!(
-            "Didn't find the TDA_CLIENT_ID env var, please set this and try again. {}",
-            e
-        ),
+        Err(e) => panic!("Didn't find the TDA_CLIENT_ID env var, please set this and try again. {}", e)
     };
 
     let refresh_token = match env::var("TDA_REFRESH_TOKEN") {
         Ok(val) => val,
-        Err(e) => panic!(
-            "Didn't find the TDA_REFRESH_TOKEN env var, please set this and try again. {}",
-            e
-        ),
+        Err(e) => panic!("Didn't find the TDA_REFRESH_TOKEN env var, please set this and try again. {}", e),
     };
 
     (client_id, refresh_token)
@@ -142,11 +167,11 @@ fn main() {
     mate.symbols = vec!["MSFT".to_string()];
 
     loop {
-        // ensure that data we're watching is fetched
-        mate.update();
+        mate.refresh_candles();
         println!("{}", mate.status());
 
-        let mr_soft_candles = mate.candles.get("MSFT").unwrap();
+        let mut mr_soft_candles = mate.candles.get("MSFT").unwrap();
+
         let sma20 = ta::sma(mr_soft_candles, 0, 20);
         let sma50 = ta::sma(mr_soft_candles, 0, 50);
         let sma100 = ta::sma(mr_soft_candles, 0, 100);
@@ -163,7 +188,7 @@ fn main() {
                 println!("buy");
                 println!("set stop loss at 95%");
             } else {
-                println!("sell");
+                    println!("sell");
             }
         }
 
