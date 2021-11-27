@@ -23,7 +23,7 @@ pub fn ema(candles: &[Candle], period: i32) -> f64 {
 
     let mut emas = vec![ema0];
     // EMA = Closing price x multiplier + EMA (previous day) x (1-multiplier)
-    for i in 0..period-1 {
+    for i in 0..period - 1 {
         let len_candles = candles.len();
         let close = candles[len_candles - ((period - i) as usize)].close;
         let previous_ema = emas[i as usize];

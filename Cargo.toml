@@ -8,3 +8,6 @@ edition = "2018"
 [dependencies]
 tda-sdk = "0.1.1"
 serde_json = "1.0.72"
+
+[patch.crates-io]
+tda-sdk = { path = "/Users/ryan/source/rust/tda-sdk-rs" }

@@ -1,2 +1,2 @@
-pub mod ta;
 pub mod datafeed;
+pub mod ta;

@@ -1,17 +1,13 @@
 use std::{
-    env,
-    thread,
+    env, thread,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use std::collections::HashMap;
 
 use tda_sdk::{
-    Client,
-    params::GetAccountsParams,
-    params::GetPriceHistoryParams,
-    responses::Candle,
-    responses::SecuritiesAccount,
+    params::GetAccountsParams, params::GetPriceHistoryParams, responses::Candle,
+    responses::SecuritiesAccount, Client,
 };
 
 mod datafeed;
@@ -22,7 +18,8 @@ mod ta;
 pub struct Mate {
     client: Client,
     candles: HashMap<String, Vec<Candle>>,
-    symbols: Vec<String>
+    last_candles: HashMap<String, Candle>,
+    symbols: Vec<String>,
 }
 
 impl Mate {
@@ -33,9 +30,10 @@ impl Mate {
         let response = client.get_access_token().unwrap();
         client.set_access_token(&Some(response.into()));
 
-        Mate{
+        Mate {
             client,
             candles: HashMap::new(),
+            last_candles: HashMap::new(),
             symbols: vec![],
         }
     }
@@ -44,7 +42,10 @@ impl Mate {
     pub fn status(&self) -> String {
         let mut status = String::new();
 
-        let accounts = self.client.get_accounts(GetAccountsParams::default()).unwrap();
+        let accounts = self
+            .client
+            .get_accounts(GetAccountsParams::default())
+            .unwrap();
 
         if accounts.len() > 1 {
             panic!("Encountered more than 1 TD Ameritrade account. Sorry, this isn't currently supported properly.")
@@ -52,9 +53,19 @@ impl Mate {
 
         for account in accounts {
             match account.securities_account {
-                SecuritiesAccount::MarginAccount { current_balances, projected_balances, .. } => {
-                    status = format!("{}Account Balance: ${}\n", status, current_balances.cash_balance);
-                    status = format!("{}Available Balance: ${}\n", status, projected_balances.cash_available_for_trading);
+                SecuritiesAccount::MarginAccount {
+                    current_balances,
+                    projected_balances,
+                    ..
+                } => {
+                    status = format!(
+                        "{}Account Balance: ${}\n",
+                        status, current_balances.cash_balance
+                    );
+                    status = format!(
+                        "{}Available Balance: ${}\n",
+                        status, projected_balances.cash_available_for_trading
+                    );
                 }
             }
         }
@@ -65,10 +76,9 @@ impl Mate {
     }
 
     fn refresh_candles(&mut self) {
-
         for symbol in self.symbols.to_vec() {
             // https://developer.tdameritrade.com/price-history/apis/get/marketdata/%7Bsymbol%7D/pricehistory
-            let params = GetPriceHistoryParams{
+            let params = GetPriceHistoryParams {
                 end_date: None,
                 frequency_type: Some(String::from("daily")),
                 frequency: Some(String::from("1")),
@@ -84,21 +94,17 @@ impl Mate {
                 Ok(val) => val,
                 Err(e) => {
                     println!("Failed to get price history: {}", e.to_string());
-                    return
-                },
+                    return;
+                }
             };
+            self.candles.insert(symbol.clone(), resp.candles);
 
-            // TODO
-            // this hacky work around ONLY works for the first iteration, then will fail on all subsequent iterations
-            // without first popping the latest appended last candle off of self.candles.
-            // Fix this when moved into datafeed
+            // last_candles provides a last period's candle to use the close price in calculations
+            // this is used in calculations like SMA and EMA
             let now = SystemTime::now();
-            let epoch = now
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_millis();
+            let epoch = now.duration_since(UNIX_EPOCH).unwrap().as_millis();
 
-            let last_session_params = GetPriceHistoryParams{
+            let last_session_params = GetPriceHistoryParams {
                 end_date: Some(epoch.to_string()),
                 frequency_type: None,
                 frequency: None,
@@ -114,35 +120,22 @@ impl Mate {
                 Ok(val) => val,
                 Err(e) => {
                     println!("Failed to get price history: {}", e.to_string());
-                    return
-                },
+                    return;
+                }
             };
 
-            let mut candles = resp.candles;
             let mut last_candles = last_resp.candles;
-            let last_candle = last_candles.pop().unwrap();
-            candles.push(last_candle);
-            self.candles.insert(symbol, candles);
+            self.last_candles
+                .insert(symbol.clone(), last_candles.pop().unwrap());
         }
+    }
 
+    fn get_latest_candles(&self, symbol: String) -> Vec<Candle> {
+        let last_candle_ref = self.last_candles.get(&symbol).unwrap().to_owned();
+        let mut candles = self.candles.get(&symbol).unwrap().clone();
 
-        // let start_ms = resp.candles[0].datetime as i64;
-        // let end_ms = resp.candles[resp.candles.len()-1].datetime as i64;
-
-        // let start_time = start_ms / 1000;
-        // let end_time = end_ms / 1000;
-
-        // let naive_start = NaiveDateTime::from_timestamp(start_time, 0);
-        // let naive_end = NaiveDateTime::from_timestamp(end_time, 0);
-
-        // let datetime_start: DateTime<Utc> = DateTime::from_utc(naive_start, Utc);
-        // let datetime_end: DateTime<Utc> = DateTime::from_utc(naive_end, Utc);
-
-        // let readable_start = datetime_start.to_rfc2822();
-        // let readable_end = datetime_end.to_rfc2822();
-
-        // println!("Gathered candle data for {} between {} and {}", resp.symbol, readable_start, readable_end);
-        // println!("Candle data contains {} candles", resp.candles.len());
+        candles.push(last_candle_ref);
+        (*candles).to_vec()
     }
 }
 
@@ -150,12 +143,18 @@ impl Mate {
 fn get_creds() -> (String, String) {
     let client_id = match env::var("TDA_CLIENT_ID") {
         Ok(val) => val,
-        Err(e) => panic!("Didn't find the TDA_CLIENT_ID env var, please set this and try again. {}", e)
+        Err(e) => panic!(
+            "Didn't find the TDA_CLIENT_ID env var, please set this and try again. {}",
+            e
+        ),
     };
 
     let refresh_token = match env::var("TDA_REFRESH_TOKEN") {
         Ok(val) => val,
-        Err(e) => panic!("Didn't find the TDA_REFRESH_TOKEN env var, please set this and try again. {}", e),
+        Err(e) => panic!(
+            "Didn't find the TDA_REFRESH_TOKEN env var, please set this and try again. {}",
+            e
+        ),
     };
 
     (client_id, refresh_token)
@@ -170,16 +169,17 @@ fn main() {
         mate.refresh_candles();
         println!("{}", mate.status());
 
-        let mut mr_soft_candles = mate.candles.get("MSFT").unwrap();
+        let candlevec = mate.get_latest_candles("MSFT".to_string());
+        let msft_candles = candlevec.as_slice();
 
-        let sma20 = ta::sma(mr_soft_candles, 0, 20);
-        let sma50 = ta::sma(mr_soft_candles, 0, 50);
-        let sma100 = ta::sma(mr_soft_candles, 0, 100);
+        let sma20 = ta::sma(msft_candles, 0, 20);
+        let sma50 = ta::sma(msft_candles, 0, 50);
+        let sma100 = ta::sma(msft_candles, 0, 100);
 
         println!("SMA20: {}\tSMA50: {}\tSMA100: {}", sma20, sma50, sma100);
 
-        let ema20 = ta::ema(mr_soft_candles, 20);
-        let ema50 = ta::ema(mr_soft_candles, 50);
+        let ema20 = ta::ema(msft_candles, 20);
+        let ema50 = ta::ema(msft_candles, 50);
 
         // TODO Check for NaN values to ensure we don't submit a faulty order
         println!("EMA20: {}\tEMA50: {}", ema20, ema50);
@@ -188,7 +188,7 @@ fn main() {
                 println!("buy");
                 println!("set stop loss at 95%");
             } else {
-                    println!("sell");
+                println!("sell");
             }
         }
 

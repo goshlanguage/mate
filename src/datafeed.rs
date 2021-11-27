@@ -1,5 +1,5 @@
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tda_sdk::{params::GetMoversParams, Client};
-use std::{time::{Duration, SystemTime, UNIX_EPOCH}};
 
 pub fn print_movers(client: Client) {
     // let movers_params = GetMoversParams{
@@ -20,10 +20,7 @@ fn get_epoch_after_period(period: i64) {
     let period_in_ms = (period as u128) * day_in_ms;
 
     let now = SystemTime::now();
-    let start_epoch = now
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_millis();
+    let start_epoch = now.duration_since(UNIX_EPOCH).unwrap().as_millis();
 
     let end_epoch = start_epoch - period_in_ms;
 
@@ -32,10 +29,10 @@ fn get_epoch_after_period(period: i64) {
 
 #[cfg(test)]
 mod tests {
-  use super::*;
+    use super::*;
 
-  #[test]
-  fn epoch_test() {
-      get_epoch_after_period(20);
-  }
+    #[test]
+    fn epoch_test() {
+        get_epoch_after_period(20);
+    }
 }
