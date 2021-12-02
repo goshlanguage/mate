@@ -423,7 +423,9 @@ dependencies = [
 
 [[package]]
 name = "tda-sdk"
-version = "0.1.1"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d3d4e2fe1031ced077fdf4cae08224ba597be82ba666a58924ba68405ccb0c54"
 dependencies = [
  "chrono",
  "serde",
