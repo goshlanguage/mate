@@ -23,7 +23,7 @@ pub fn ema(candles: &[Candle], period: i32) -> f64 {
 
     let mut emas = vec![ema0];
     // EMA = Closing price x multiplier + EMA (previous day) x (1-multiplier)
-    for i in 0..period {
+    for i in 0..period - 1 {
         let len_candles = candles.len();
         let close = candles[len_candles - ((period - i) as usize)].close;
         let previous_ema = emas[i as usize];
@@ -38,13 +38,12 @@ pub fn ema(candles: &[Candle], period: i32) -> f64 {
 pub fn sma(candles: &[Candle], start: usize, period: usize) -> f64 {
     let mut sum = 0.0;
 
-    for i in start..end {
+    for i in start..start + period {
         let i_usize = i as usize;
         sum += candles[candles.len() - 1 - i_usize].close;
     }
 
-    let difference = (end - start) as f64;
-    let average = sum / difference;
+    let average = sum / (period as f64);
 
     round(average)
 }
@@ -57,39 +56,13 @@ fn round(i: f64) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tda_sdk::responses::GetPriceHistoryResponse;
 
     #[test]
     fn sma_test() {
-
-      let candle_1 = Candle{
-        close: 1.0,
-        datetime: 12345,
-        high: 0.0,
-        low: 0.0,
-        open: 1.0,
-        volume: 1,
-      };
-
-      let candle_2 = Candle{
-        close: 2.0,
-        datetime: 12345,
-        high: 0.0,
-        low: 0.0,
-        open: 1.0,
-        volume: 1,
-      };
-
-      let candle_3 = Candle{
-        close: 3.0,
-        datetime: 12345,
-        high: 0.0,
-        low: 0.0,
-        open: 1.0,
-        volume: 1,
-      };
-
-      let sma = sma(&[candle_1, candle_2, candle_3], 0, 3);
-      assert_eq!(sma, 2.0);
+        let candles = &test_helper();
+        let sma = sma(candles, 0, 3);
+        assert_eq!(sma, 10.76);
     }
 
     #[test]
@@ -108,5 +81,51 @@ mod tests {
         let rounded = round(input);
 
         assert_eq!(rounded, 4.57);
+    }
+
+    fn test_helper() -> Vec<Candle> {
+        let sample_ticker_data = r#"{
+            "candles": [
+                {
+                    "open": 10.525,
+                    "high": 11.395,
+                    "low": 10.34,
+                    "close": 12,
+                    "volume": 54379431,
+                    "datetime": 1606284000000
+                },
+                {
+                    "open": 9.35,
+                    "high": 10.75,
+                    "low": 9.32,
+                    "close": 10.41,
+                    "volume": 72355931,
+                    "datetime": 1606284000000
+                },
+                {
+                    "open": 11.04,
+                    "high": 11.21,
+                    "low": 10.63,
+                    "close": 10.86,
+                    "volume": 57905144,
+                    "datetime": 1606197600000
+                },
+                {
+                    "open": 10.525,
+                    "high": 11.395,
+                    "low": 10.34,
+                    "close": 11,
+                    "volume": 54379431,
+                    "datetime": 1606284000000
+                }
+              ],
+              "symbol": "M",
+              "empty": false
+            }
+        "#;
+
+        let sample: GetPriceHistoryResponse = serde_json::from_str(sample_ticker_data).unwrap();
+
+        sample.candles
     }
 }

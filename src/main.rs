@@ -1,12 +1,13 @@
-use std::{env, thread, time::Duration};
+use std::{
+    env, thread,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 
 use std::collections::HashMap;
 
-use tda_sdk::{
-    params::GetAccountsParams, params::GetPriceHistoryParams, responses::Candle,
-    responses::SecuritiesAccount, Client,
-};
+use tda_sdk::{Client, params::GetAccountsParams, params::GetPriceHistoryParams, responses::Candle, responses::{GetPriceHistoryResponse, SecuritiesAccount}};
 
+mod datafeed;
 mod ta;
 
 // mate makes use of the tda-sdk crate for access to a brokerage API
@@ -14,6 +15,7 @@ mod ta;
 pub struct Mate {
     client: Client,
     candles: HashMap<String, Vec<Candle>>,
+    last_candles: HashMap<String, Candle>,
     symbols: Vec<String>,
 }
 
@@ -28,6 +30,7 @@ impl Mate {
         Mate {
             client,
             candles: HashMap::new(),
+            last_candles: HashMap::new(),
             symbols: vec![],
         }
     }
@@ -69,7 +72,7 @@ impl Mate {
         status
     }
 
-    fn update(&mut self) {
+    fn refresh_candles(&mut self) {
         for symbol in self.symbols.to_vec() {
             // https://developer.tdameritrade.com/price-history/apis/get/marketdata/%7Bsymbol%7D/pricehistory
             let params = GetPriceHistoryParams {
@@ -91,27 +94,76 @@ impl Mate {
                     return;
                 }
             };
+            self.candles.insert(symbol.clone(), resp.candles);
 
-            self.candles.insert(symbol, resp.candles);
+            // last_candles provides a last period's candle to use the close price in calculations
+            // this is used in calculations like SMA and EMA
+            let now = SystemTime::now();
+            let mut epoch = now.duration_since(UNIX_EPOCH).unwrap().as_millis();
+
+            let last_session_params = GetPriceHistoryParams {
+                end_date: Some(epoch.to_string()),
+                frequency_type: None,
+                frequency: None,
+                need_extended_hours_data: Some(false),
+                period_type: None,
+                period: None,
+                start_date: Some(epoch.to_string()),
+            };
+
+            let last_session_history = self.client.get_price_history(&symbol, last_session_params);
+
+            let last_resp = match last_session_history {
+                Ok(val) => val,
+                Err(e) => {
+                    println!("Failed to get price history: {}", e.to_string());
+
+                    let day_in_ms = 24 * 60 * Duration::new(60, 0).as_millis();
+                    epoch = epoch - day_in_ms;
+                    self.get_price_history_by_epoch(symbol.clone(), epoch)
+
+                }
+            };
+
+            let mut last_candles = last_resp.candles;
+            self.last_candles
+                .insert(symbol.clone(), last_candles.pop().unwrap());
+            }
         }
 
-        // let start_ms = resp.candles[0].datetime as i64;
-        // let end_ms = resp.candles[resp.candles.len()-1].datetime as i64;
+        fn get_price_history_by_epoch(&self, symbol: String, mut epoch: u128) -> GetPriceHistoryResponse {
+            let last_session_params = GetPriceHistoryParams {
+                end_date: Some(epoch.to_string()),
+                frequency_type: None,
+                frequency: None,
+                need_extended_hours_data: Some(false),
+                period_type: None,
+                period: None,
+                start_date: Some(epoch.to_string()),
+            };
 
-        // let start_time = start_ms / 1000;
-        // let end_time = end_ms / 1000;
+            let last_session_history = self.client.get_price_history(&symbol, last_session_params);
 
-        // let naive_start = NaiveDateTime::from_timestamp(start_time, 0);
-        // let naive_end = NaiveDateTime::from_timestamp(end_time, 0);
+            let last_resp = match last_session_history {
+                Ok(val) => val,
+                Err(e) => {
+                    println!("Failed to get price history: {}", e.to_string());
 
-        // let datetime_start: DateTime<Utc> = DateTime::from_utc(naive_start, Utc);
-        // let datetime_end: DateTime<Utc> = DateTime::from_utc(naive_end, Utc);
+                    let hour_in_ms = 60 * Duration::new(60, 0).as_millis();
+                    epoch = epoch - hour_in_ms;
+                    self.get_price_history_by_epoch(symbol, epoch)
+                }
+            };
 
-        // let readable_start = datetime_start.to_rfc2822();
-        // let readable_end = datetime_end.to_rfc2822();
+            last_resp
+    }
 
-        // println!("Gathered candle data for {} between {} and {}", resp.symbol, readable_start, readable_end);
-        // println!("Candle data contains {} candles", resp.candles.len());
+    fn get_latest_candles(&self, symbol: String) -> Vec<Candle> {
+        let last_candle_ref = self.last_candles.get(&symbol).unwrap().to_owned();
+        let mut candles = self.candles.get(&symbol).unwrap().clone();
+
+        candles.push(last_candle_ref);
+        (*candles).to_vec()
     }
 }
 
@@ -142,19 +194,20 @@ fn main() {
     mate.symbols = vec!["MSFT".to_string()];
 
     loop {
-        // ensure that data we're watching is fetched
-        mate.update();
+        mate.refresh_candles();
         println!("{}", mate.status());
 
-        let mr_soft_candles = mate.candles.get("MSFT").unwrap();
-        let sma20 = ta::sma(mr_soft_candles, 0, 20);
-        let sma50 = ta::sma(mr_soft_candles, 0, 50);
-        let sma100 = ta::sma(mr_soft_candles, 0, 100);
+        let candlevec = mate.get_latest_candles("MSFT".to_string());
+        let msft_candles = candlevec.as_slice();
+
+        let sma20 = ta::sma(msft_candles, 0, 20);
+        let sma50 = ta::sma(msft_candles, 0, 50);
+        let sma100 = ta::sma(msft_candles, 0, 100);
 
         println!("SMA20: {}\tSMA50: {}\tSMA100: {}", sma20, sma50, sma100);
 
-        let ema20 = ta::ema(mr_soft_candles, 20);
-        let ema50 = ta::ema(mr_soft_candles, 50);
+        let ema20 = ta::ema(msft_candles, 20);
+        let ema50 = ta::ema(msft_candles, 50);
 
         // TODO Check for NaN values to ensure we don't submit a faulty order
         println!("EMA20: {}\tEMA50: {}", ema20, ema50);
