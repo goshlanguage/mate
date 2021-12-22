@@ -4,7 +4,7 @@ WORKDIR /usr/src/mate
 COPY . .
 RUN case "$TARGETPLATFORM" in \
       "linux/arm/v7") rustup armv7-unknown-linux-musleabihf ;; \
-      *) continue ;; \
+      *) break ;; \
     esac
 RUN rustup target add $(cat /rust_target.txt)
 RUN cargo install --path .
