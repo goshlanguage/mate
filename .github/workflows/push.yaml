@@ -1,7 +1,6 @@
 on:
   push
 
-
 jobs:
   check:
     name: cargo check
@@ -70,3 +69,35 @@ jobs:
         with:
           command: clippy
           args: -- -D warnings
+
+  build_image:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v1
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
+
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v1
+      with:
+        registry: ghcr.io
+        username: goshlanguage
+        password: ${{ secrets.GHCR_TOKEN }}
+
+    - name: Build and push
+      id: docker_build
+      uses: docker/build-push-action@v2
+      with:
+        push: true
+        tags: |
+          ghcr.io/goshlanguage/mate:latest
+          ghcr.io/goshlanguage/mate:${{ github.sha }}
+        platforms: linux/amd64,linux/arm64
