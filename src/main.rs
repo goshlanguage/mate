@@ -5,7 +5,13 @@ use std::{
 
 use std::collections::HashMap;
 
-use tda_sdk::{Client, params::GetAccountsParams, params::GetPriceHistoryParams, responses::Candle, responses::{GetPriceHistoryResponse, SecuritiesAccount}};
+use tda_sdk::{
+    params::GetAccountsParams,
+    params::GetPriceHistoryParams,
+    responses::Candle,
+    responses::{GetPriceHistoryResponse, SecuritiesAccount},
+    Client,
+};
 
 mod datafeed;
 mod ta;
@@ -121,41 +127,44 @@ impl Mate {
                     let day_in_ms = 24 * 60 * Duration::new(60, 0).as_millis();
                     epoch = epoch - day_in_ms;
                     self.get_price_history_by_epoch(symbol.clone(), epoch)
-
                 }
             };
 
             let mut last_candles = last_resp.candles;
             self.last_candles
                 .insert(symbol.clone(), last_candles.pop().unwrap());
-            }
         }
+    }
 
-        fn get_price_history_by_epoch(&self, symbol: String, mut epoch: u128) -> GetPriceHistoryResponse {
-            let last_session_params = GetPriceHistoryParams {
-                end_date: Some(epoch.to_string()),
-                frequency_type: None,
-                frequency: None,
-                need_extended_hours_data: Some(false),
-                period_type: None,
-                period: None,
-                start_date: Some(epoch.to_string()),
-            };
+    fn get_price_history_by_epoch(
+        &self,
+        symbol: String,
+        mut epoch: u128,
+    ) -> GetPriceHistoryResponse {
+        let last_session_params = GetPriceHistoryParams {
+            end_date: Some(epoch.to_string()),
+            frequency_type: None,
+            frequency: None,
+            need_extended_hours_data: Some(false),
+            period_type: None,
+            period: None,
+            start_date: Some(epoch.to_string()),
+        };
 
-            let last_session_history = self.client.get_price_history(&symbol, last_session_params);
+        let last_session_history = self.client.get_price_history(&symbol, last_session_params);
 
-            let last_resp = match last_session_history {
-                Ok(val) => val,
-                Err(e) => {
-                    println!("Failed to get price history: {}", e.to_string());
+        let last_resp = match last_session_history {
+            Ok(val) => val,
+            Err(e) => {
+                println!("Failed to get price history: {}", e.to_string());
 
-                    let hour_in_ms = 60 * Duration::new(60, 0).as_millis();
-                    epoch = epoch - hour_in_ms;
-                    self.get_price_history_by_epoch(symbol, epoch)
-                }
-            };
+                let hour_in_ms = 60 * Duration::new(60, 0).as_millis();
+                epoch = epoch - hour_in_ms;
+                self.get_price_history_by_epoch(symbol, epoch)
+            }
+        };
 
-            last_resp
+        last_resp
     }
 
     fn get_latest_candles(&self, symbol: String) -> Vec<Candle> {
