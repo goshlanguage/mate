@@ -3,10 +3,9 @@ ARG TARGETPLATFORM
 WORKDIR /usr/src/mate
 COPY . .
 RUN case "$TARGETPLATFORM" in \
-      "linux/arm/v7") rustup armv7-unknown-linux-musleabihf ;; \
+      "linux/arm/v7") rustup target add armv7-unknown-linux-musleabihf ;; \
       *) break ;; \
     esac
-RUN rustup target add $(cat /rust_target.txt)
 RUN cargo install --path .
 
 FROM --platform=$BUILDPLATFORM alpine:3.14
