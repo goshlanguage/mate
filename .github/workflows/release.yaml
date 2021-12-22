@@ -1,0 +1,36 @@
+name: build and publish
+
+on:
+  push:
+    branches:
+      - trunk
+    tags:
+      - '*'
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v1
+      with:
+        registry: ghcr.io
+        username: goshlanguage
+        password: ${{ secrets.GHCR_TOKEN }}
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
+
+    - name: Build and push
+      id: docker_build
+      uses: docker/build-push-action@v2
+      with:
+        push: true
+        tags: |
+          ghcr.io/goshlanguage/mate:latest
+          ghcr.io/goshlanguage/mate:${{ github.sha }}
+        platforms: linux/amd64,linux/arm/v7
