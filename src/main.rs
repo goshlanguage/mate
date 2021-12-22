@@ -13,7 +13,6 @@ use tda_sdk::{
     Client,
 };
 
-mod datafeed;
 mod ta;
 
 // mate makes use of the tda-sdk crate for access to a brokerage API
