@@ -124,7 +124,7 @@ impl Mate {
                     println!("Failed to get price history: {}", e.to_string());
 
                     let day_in_ms = 24 * 60 * Duration::new(60, 0).as_millis();
-                    epoch = epoch - day_in_ms;
+                    epoch -= day_in_ms;
                     self.get_price_history_by_epoch(symbol.clone(), epoch)
                 }
             };
@@ -158,7 +158,7 @@ impl Mate {
                 println!("Failed to get price history: {}", e.to_string());
 
                 let hour_in_ms = 60 * Duration::new(60, 0).as_millis();
-                epoch = epoch - hour_in_ms;
+                epoch -= hour_in_ms;
                 self.get_price_history_by_epoch(symbol, epoch)
             }
         };
