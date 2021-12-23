@@ -1,3 +1,5 @@
+use clap::{Arg, App};
+
 use std::{
     env, thread,
     time::{Duration, SystemTime, UNIX_EPOCH},
@@ -197,6 +199,26 @@ fn get_creds() -> (String, String) {
 }
 
 fn main() {
+    let matches = App::new("mate")
+        .version("v0.1.0")
+        .about("mini algorithmic trading engine")
+        .arg(Arg::with_name("broker")
+            .short("b")
+            .multiple(true)
+            .takes_value(true)
+            .help("enables a broker, eg --broker tdameritrade"))
+        .get_matches();
+
+    if matches.occurrences_of("broker") > 0 {
+        let brokers: Vec<_> = matches.values_of("broker").unwrap().collect();
+        for broker in brokers {
+            match broker {
+                "tdameritrade" => println!("enabled tdameritrade"),
+                _ => panic!("unsupported broker {}, exiting", broker)
+            }
+        }
+    }
+
     let mut mate = Mate::default();
 
     mate.symbols = vec!["MSFT".to_string()];
