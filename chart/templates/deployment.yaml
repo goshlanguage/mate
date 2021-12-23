@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: mate
+  name: mate
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mate
+  template:
+    metadata:
+      labels:
+        app: mate
+    spec:
+      containers:
+      - name: mate
+        image: "{{ .Values.image.repo }}:{{ .Values.image.tag }}"
+        imagePullPolicy: IfNotPresent
+        {{- if .Values.tdameritrade.enabled }}
+        envFrom:
+        - secretRef:
+            name: {{ .Values.tdameritrade.existingSecret }}
+        {{- end }}
+      imagePullSecrets:
+      - name: regcred

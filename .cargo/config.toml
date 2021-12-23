@@ -1,5 +1,0 @@
-# Explicitly set gcc linker on arm targets
-#   in hopes to optimize armv7 builds
-#
-[target.armv7-unknown-linux-gnueabihf]
-linker = "arm-linux-gnueabihf-gcc"
