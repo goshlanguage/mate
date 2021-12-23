@@ -1,0 +1,12 @@
+image:
+  repo: ghcr.io/goshlanguage/mate
+  tag: latest
+
+# You must create a secret containing the env vars `TDA_CLIENT_ID`
+# and `TDA_REFRESH_TOKEN` to pass into mate to connect to tdameritrade
+#
+# This can be created via :
+# kubectl create secret generic tda-creds --from-literal=TDA_CLIENT_ID=$TDA_CLIENT_ID --from-literal=TDA_REFRESH_TOKEN=$TDA_REFRESH_TOKEN
+tdameritrade:
+  enabled: true
+  existingSecret: tda-creds

@@ -33,4 +33,4 @@ jobs:
         tags: |
           ghcr.io/goshlanguage/mate:latest
           ghcr.io/goshlanguage/mate:${{ github.sha }}
-        platforms: linux/amd64,linux/arm/v7
+        platforms: linux/amd64,linux/arm64
