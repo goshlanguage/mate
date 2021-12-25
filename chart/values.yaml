@@ -10,3 +10,6 @@ image:
 tdameritrade:
   enabled: true
   existingSecret: tda-creds
+
+s3:
+  enabled: true
