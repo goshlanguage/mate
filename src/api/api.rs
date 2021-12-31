@@ -24,6 +24,9 @@ fn main() {
         .get_matches();
 
     init_logging(matches.borrow());
+    info!("Starting api");
+
+    error!("Not implemented");
 
     exit(0)
 }

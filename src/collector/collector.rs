@@ -35,6 +35,9 @@ fn main() {
     init_logging(matches.borrow());
 
     let sources = get_sources(matches.borrow());
+    for source in sources {
+      info!("Loading {}", source);
+    }
 }
 
 // init_logging is a helper that parses output from clap's get_matches()
@@ -78,5 +81,5 @@ fn get_sources(matches: &ArgMatches) -> Vec<String> {
         exit(1);
     }
 
-    return valid_sources;
+    valid_sources
 }
