@@ -1,4 +1,4 @@
-use clap::{Arg, App};
+use clap::{App, Arg};
 
 use std::{
     env, thread,
@@ -15,7 +15,7 @@ use tda_sdk::{
     Client,
 };
 
-#[path="../ta/ta.rs"]
+#[path = "../ta/ta.rs"]
 mod ta;
 
 // mate makes use of the tda-sdk crate for access to a brokerage API
@@ -203,23 +203,29 @@ fn main() {
     let matches = App::new("mate")
         .version("v0.1.0")
         .about("mini algorithmic trading engine")
-        .arg(Arg::with_name("config")
-            .short("c")
-            .long("config")
-            .value_name("FILE")
-            .help("Sets a custom config file")
-            .takes_value(true))
-        .arg(Arg::with_name("v")
-            .short("v")
-            .multiple(true)
-            .help("Sets the level of verbosity"))
-        .arg(Arg::with_name("broker")
-            .short("b")
-            .long("broker")
-            .multiple(true)
-            .takes_value(true)
-            .env("MATE_BROKER")
-            .help("enables a broker, eg --broker tdameritrade"))
+        .arg(
+            Arg::with_name("config")
+                .short("c")
+                .long("config")
+                .value_name("FILE")
+                .help("Sets a custom config file")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("v")
+                .short("v")
+                .multiple(true)
+                .help("Sets the level of verbosity"),
+        )
+        .arg(
+            Arg::with_name("broker")
+                .short("b")
+                .long("broker")
+                .multiple(true)
+                .takes_value(true)
+                .env("MATE_BROKER")
+                .help("enables a broker, eg --broker tdameritrade"),
+        )
         .get_matches();
 
     if matches.occurrences_of("broker") > 0 {
@@ -227,7 +233,7 @@ fn main() {
         for broker in brokers {
             match broker {
                 "tdameritrade" => println!("enabled tdameritrade"),
-                _ => panic!("unsupported broker {}, exiting", broker)
+                _ => panic!("unsupported broker {}, exiting", broker),
             }
         }
     }
