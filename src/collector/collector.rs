@@ -36,7 +36,7 @@ fn main() {
 
     let sources = get_sources(matches.borrow());
     for source in sources {
-      info!("Loading {}", source);
+        info!("Loading {}", source);
     }
 }
 
