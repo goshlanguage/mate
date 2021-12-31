@@ -4,7 +4,7 @@ use env_logger::Builder;
 use hyper::{
     body::to_bytes,
     service::{make_service_fn, service_fn},
-    Body, Request, Server
+    Body, Request, Server,
 };
 use log::{info, LevelFilter};
 use route_recognizer::Params;
@@ -55,12 +55,14 @@ async fn main() -> Result<(), Error> {
     let args = Args::parse();
     init_logging(args.verbose);
 
-    let psql_conn_string = format!("host={} port={} user={} password={}", args.postgres_hostname, args.postgres_port, args.postgres_user, args.postgres_password);
+    let psql_conn_string = format!(
+        "host={} port={} user={} password={}",
+        args.postgres_hostname, args.postgres_port, args.postgres_user, args.postgres_password
+    );
     info!("psql connstring: {}", psql_conn_string);
 
     // Connect to the database.
-    let (client, connection) =
-        tokio_postgres::connect(psql_conn_string.as_str(), NoTls).await?;
+    let (client, connection) = tokio_postgres::connect(psql_conn_string.as_str(), NoTls).await?;
 
     tokio::spawn(async move {
         if let Err(e) = connection.await {
@@ -68,9 +70,7 @@ async fn main() -> Result<(), Error> {
         }
     });
 
-    let rows = client
-        .query("SELECT $1::TEXT", &[&"hello world"])
-        .await?;
+    let rows = client.query("SELECT $1::TEXT", &[&"hello world"]).await?;
 
     let value: &str = rows[0].get(0);
     info!("{}", value);

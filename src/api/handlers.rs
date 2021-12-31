@@ -24,9 +24,9 @@ pub async fn brokers_update(mut ctx: Context) -> Response {
         Ok(v) => v,
         Err(e) => {
             return hyper::Response::builder()
-            .status(StatusCode::BAD_REQUEST)
-            .body(format!("could not parse JSON: {}", e).into())
-            .unwrap()
+                .status(StatusCode::BAD_REQUEST)
+                .body(format!("could not parse JSON: {}", e).into())
+                .unwrap()
         }
     };
 
