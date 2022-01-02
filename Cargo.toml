@@ -5,7 +5,7 @@ edition = "2018"
 
 [[bin]]
 name = "mate"
-path = "src/engine/main.rs"
+path = "src/main.rs"
 
 [[bin]]
 name = "mate-collector"
