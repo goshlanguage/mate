@@ -14,9 +14,9 @@ pub struct Account {
 
 impl Account {
     pub fn new(name: &str, account_type: AccountType) -> Account {
-        return Account {
+        Account {
             name: name.to_string(),
-            account_type: account_type,
-        };
+            account_type,
+        }
     }
 }

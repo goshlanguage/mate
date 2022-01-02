@@ -13,10 +13,7 @@ pub async fn brokers_get(ctx: Context) -> String {
 }
 
 pub async fn brokers_get_one(ctx: Context) -> String {
-    let param = match ctx.params.find("broker") {
-        Some(v) => v,
-        None => "empty",
-    };
+    let param = ctx.params.find("broker").unwrap_or("");
     format!("{{'brokers': '{}'}}", param)
 }
 

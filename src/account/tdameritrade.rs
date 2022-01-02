@@ -1,4 +1,4 @@
-use super::account::*;
+use super::types::*;
 use log::info;
 use std::env;
 use tda_sdk::{
@@ -33,14 +33,14 @@ impl TDAmeritradeAccount {
         let response = client.get_access_token().unwrap();
         client.set_access_token(&Some(response.into()));
 
-        return TDAmeritradeAccount {
+        TDAmeritradeAccount {
             account_id: account_id.to_string(),
             active: true,
             account: Account::new(name, AccountType::Brokerage),
-            client: client,
+            client,
             client_id: client_id.to_string(),
             refresh_token: refresh_token.to_string(),
-        };
+        }
     }
 
     #[allow(dead_code)]
