@@ -5,7 +5,9 @@ use std::{collections::HashMap, thread, time::Duration};
 use tda_sdk::responses::Candle;
 
 mod account;
-use account::tdameritrade::{get_creds, TDAmeritradeAccount};
+use account::kraken::{get_kraken_creds, KrakenAccount};
+use account::tdameritrade::{get_tdameritrade_creds, TDAmeritradeAccount};
+use account::types::AccountType;
 
 mod ta;
 use ta::average::{ema, sma};
@@ -27,30 +29,90 @@ struct Args {
 // mate makes use of the tda-sdk crate for access to a brokerage API
 // https://github.com/rideron89/tda-sdk-rs
 pub struct Mate {
-    account: TDAmeritradeAccount,
+    accounts: Vec<AccountType>,
     candles: HashMap<String, Vec<Candle>>,
     symbols: Vec<String>,
 }
 
 impl Mate {
     pub fn default() -> Self {
-        let (client_id, refresh_token) = get_creds();
+        let (client_id, refresh_token) = get_tdameritrade_creds();
         let td_account = TDAmeritradeAccount::new(
             "TDAmeritrade",
-            "My account",
+            "My td ameritrade account",
             client_id.as_str(),
             refresh_token.as_str(),
         );
 
+        let (client_key, client_secret) = get_kraken_creds();
+        let kraken_account = KrakenAccount::new(
+            "Kraken",
+            "My kraken account",
+            client_key.as_str(),
+            client_secret.as_str(),
+        );
+
+        let accounts: Vec<AccountType> = vec![
+            AccountType::TDAmeritradeAccount(td_account),
+            AccountType::KrakenAccount(kraken_account),
+        ];
+
         Mate {
-            account: td_account,
+            accounts: accounts,
             candles: HashMap::new(),
             symbols: vec![],
         }
     }
 
     pub fn status(&self) {
-        self.account.get_account_ids();
+        for account in &self.accounts {
+            match account {
+                AccountType::TDAmeritradeAccount(account) => {
+                    info!("Found TDAmeritrade Accounts: {}", account.get_account_ids())
+                }
+                AccountType::KrakenAccount(account) => {
+                    info!("Found Kraken Accounts: {}", account.get_account_balances());
+                }
+            }
+        }
+    }
+
+    pub fn update_td(&mut self, mut account: TDAmeritradeAccount) {
+        let symbols = self.symbols.clone();
+        for symbol in symbols {
+            self.candles
+                .insert(symbol.to_string(), account.get_candles(symbol.to_string()));
+        }
+
+        let msft_candles = self.candles.get("MSFT").unwrap();
+
+        let sma20 = sma(msft_candles, 0, 20);
+        let sma50 = sma(msft_candles, 0, 50);
+        let sma100 = sma(msft_candles, 0, 100);
+
+        info!("SMA20: {}\tSMA50: {}\tSMA100: {}", sma20, sma50, sma100);
+
+        let ema20 = ema(msft_candles, 20);
+        let ema50 = ema(msft_candles, 50);
+
+        // TODO Check for NaN values to ensure we don't submit a faulty order
+        info!("EMA20: {}\tEMA50: {}", ema20, ema50);
+        if ema20 > 0.0 && ema50 > 0.0 {
+            if ema20 > ema50 {
+                info!("buy");
+                info!("set stop loss at 95%");
+            } else {
+                info!("sell");
+            }
+        }
+    }
+
+    pub fn update_kraken(&self, account: KrakenAccount) {
+        info!(
+            "Bitcoin current data: {}",
+            account.get_pairs("XBTUSD").as_str()
+        );
+        info!("ETH current data: {}", account.get_pairs("ETHUSD").as_str());
     }
 }
 
@@ -82,33 +144,17 @@ fn main() {
     mate.symbols = vec!["MSFT".to_string()];
 
     loop {
-        for symbol in &mate.symbols {
-            mate.candles.insert(
-                symbol.to_string(),
-                mate.account.get_candles(symbol.to_string()),
-            );
-        }
         mate.status();
 
-        let msft_candles = mate.candles.get("MSFT").unwrap();
-
-        let sma20 = sma(msft_candles, 0, 20);
-        let sma50 = sma(msft_candles, 0, 50);
-        let sma100 = sma(msft_candles, 0, 100);
-
-        info!("SMA20: {}\tSMA50: {}\tSMA100: {}", sma20, sma50, sma100);
-
-        let ema20 = ema(msft_candles, 20);
-        let ema50 = ema(msft_candles, 50);
-
-        // TODO Check for NaN values to ensure we don't submit a faulty order
-        info!("EMA20: {}\tEMA50: {}", ema20, ema50);
-        if ema20 > 0.0 && ema50 > 0.0 {
-            if ema20 > ema50 {
-                info!("buy");
-                info!("set stop loss at 95%");
-            } else {
-                info!("sell");
+        for account in mate.accounts.clone() {
+            match account {
+                AccountType::TDAmeritradeAccount(account) => {
+                    mate.update_td(account);
+                }
+                AccountType::KrakenAccount(account) => {
+                    mate.update_kraken(account);
+                }
+                _ => info!("Unknown account found"),
             }
         }
 

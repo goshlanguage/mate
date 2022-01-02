@@ -1,22 +1,25 @@
+use super::kraken::KrakenAccount;
+use super::tdameritrade::TDAmeritradeAccount;
+use super::traits::get::Get;
+
 /// AccountType enum differentiates between what kind of account is being managed.
-/// TODO
-///   drop dead_code lint allow once an Exchange is implemented
-#[allow(dead_code)]
+#[derive(Clone)]
 pub enum AccountType {
-    Brokerage,
-    Exchange,
+    KrakenAccount(KrakenAccount),
+    TDAmeritradeAccount(TDAmeritradeAccount),
 }
 
+#[derive(Clone)]
 pub struct Account {
     pub name: String,
-    pub account_type: AccountType,
 }
 
 impl Account {
-    pub fn new(name: &str, account_type: AccountType) -> Account {
+    pub fn new(name: &str) -> Account {
         Account {
             name: name.to_string(),
-            account_type,
         }
     }
 }
+
+impl Get for AccountType {}

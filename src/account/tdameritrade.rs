@@ -1,3 +1,4 @@
+use super::traits::get::Get;
 use super::types::*;
 use log::info;
 use std::env;
@@ -8,14 +9,14 @@ use tda_sdk::{
 };
 
 /// # TDAmeritradeAccount
-///  TDAmeritradeAccount represents a brokerage account, and should be initialized using the new factory
+///  TDAmeritradeAccount represents a brokerage account
 /// ```rust
 /// let account = TDAmeritradeAccount::new(name, account_id, client_id, refresh_token);
 /// ```
+#[derive(Clone)]
 pub struct TDAmeritradeAccount {
     pub account_id: String,
     pub account: Account,
-    pub client: Client,
     pub client_id: String,
     pub refresh_token: String,
     pub active: bool,
@@ -36,38 +37,35 @@ impl TDAmeritradeAccount {
         TDAmeritradeAccount {
             account_id: account_id.to_string(),
             active: true,
-            account: Account::new(name, AccountType::Brokerage),
-            client,
+            account: Account::new(name),
             client_id: client_id.to_string(),
             refresh_token: refresh_token.to_string(),
         }
     }
 
-    #[allow(dead_code)]
-    pub fn get_account_ids(&self) {
+    pub fn client(&self) -> Client {
+        let mut client = Client::new(&self.client_id, &self.refresh_token, None);
+        let response = client.get_access_token().unwrap();
+        client.set_access_token(&Some(response.into()));
+        client
+    }
+
+    pub fn get_account_ids(&self) -> String {
         info!("Returning account ids");
         let accounts = self
-            .client
+            .client()
             .get_accounts(GetAccountsParams::default())
             .unwrap();
 
+        let mut ids: Vec<String> = Vec::new();
         for account in accounts {
             match account.securities_account {
-                SecuritiesAccount::MarginAccount {
-                    account_id,
-                    current_balances,
-                    projected_balances,
-                    ..
-                } => {
-                    info!("Account ID: {}", account_id);
-                    info!("Account Balance: ${}", current_balances.cash_balance);
-                    info!(
-                        "Available Balance: ${}",
-                        projected_balances.cash_available_for_trading
-                    );
+                SecuritiesAccount::MarginAccount { account_id, .. } => {
+                    ids.push(account_id);
                 }
             }
         }
+        ids.join(", ")
     }
 
     /// get_candles is responsible for fetching any new candles as necessary
@@ -85,7 +83,7 @@ impl TDAmeritradeAccount {
             start_date: None,
         };
 
-        let history = self.client.get_price_history(symbol.as_str(), params);
+        let history = self.client().get_price_history(symbol.as_str(), params);
 
         let resp = match history {
             Ok(val) => val,
@@ -100,7 +98,7 @@ impl TDAmeritradeAccount {
 }
 
 // get_creds looks for `TDA_CLIENT_ID` and `TDA_REFRESH_TOKEN` environment variables and panics if they aren't present.
-pub fn get_creds() -> (String, String) {
+pub fn get_tdameritrade_creds() -> (String, String) {
     let client_id = match env::var("TDA_CLIENT_ID") {
         Ok(val) => val,
         Err(e) => panic!(
@@ -119,3 +117,5 @@ pub fn get_creds() -> (String, String) {
 
     (client_id, refresh_token)
 }
+
+impl Get for TDAmeritradeAccount {}

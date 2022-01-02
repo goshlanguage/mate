@@ -5,7 +5,7 @@ use std::{thread, time::Duration};
 
 #[path = "../account/mod.rs"]
 mod account;
-use account::tdameritrade::{get_creds, TDAmeritradeAccount};
+use account::tdameritrade::{get_tdameritrade_creds, TDAmeritradeAccount};
 
 /// You can see the spec for clap's arg attributes here:
 ///      <https://github.com/clap-rs/clap/blob/v3.0.0-rc.11/examples/derive_ref/README.md#arg-attributes>
@@ -29,7 +29,7 @@ fn main() {
 
     info!("Starting collector");
 
-    let (client_id, refresh_token) = get_creds();
+    let (client_id, refresh_token) = get_tdameritrade_creds();
     let mut td_account = TDAmeritradeAccount::new(
         "TDAmeritrade",
         "My account",

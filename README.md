@@ -1,16 +1,13 @@
-mate
-===
+# mate
 
-## Mini Algorithmic Trading Engine
+`mate` is an experimental mini algorithmic trading engine. I am writing this to learn more about algorithmic trading, and quantitative finance.
 
-`mate` is an experimental trading engine project. Use at your own risk.
+Mate supports the following account types:
 
-Mate supports the following brokerages:
-
-|Broker|Description|
-|-|-|
-|TD Ameritrade|See [TD Ameritrade developer portal](https://developer.tdameritrade.com/user) and [TDA SDK Crate source](https://github.com/rideron89/tda-sdk-rs/) in use for this project|
-
+| Account Type  | Description                                                                                                                                                                |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| TD Ameritrade | See [TD Ameritrade developer portal](https://developer.tdameritrade.com/user) and [TDA SDK Crate source](https://github.com/rideron89/tda-sdk-rs/) in use for this project |
+| Kraken        | See [Kraken API docs](https://docs.kraken.com/rest/#section/Authentication) and [TDA SDK Crate source](https://github.com/rideron89/tda-sdk-rs/) in use for this project   |
 
 ## Getting Started
 
@@ -20,11 +17,14 @@ You will need access to an API with live market data. Currently only supporting 
 
 Configuration is passed in through environment only currently:
 
-|Env Var|Description|
-|-|-|
-|`TDA_CLIENT_ID`|OAuth Client ID from your TD Ameritrade developer account, appending your oAuth domain eg: `@AMER.OAUTHAP`|
-|`TDA_REFRESH_TOKEN`|Oauth refresh token to renew oauth access token, see [`TD Ameritrade`](#TD-Ameritrade-Setup) for |
+| Env Var                | Description                                                                                                |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `TDA_CLIENT_ID`        | OAuth Client ID from your TD Ameritrade developer account, appending your oAuth domain eg: `@AMER.OAUTHAP` |
+| `TDA_REFRESH_TOKEN`    | Oauth refresh token to renew oauth access token, see [`TD Ameritrade`](#TD-Ameritrade-Setup)               |
+| `KRAKEN_CLIENT_KEY`    | API client key for your Kraken Account                                                                     |
+| `KRAKEN_CLIENT_SECRET` | API client secret for your Kraken Account                                                                  |
 
+## Getting your keys
 
 ### TD Ameritrade Setup
 
@@ -53,12 +53,12 @@ To register an account and get API access, you can either see [upstream document
 >
 > https://developer.tdameritrade.com/content/authentication-faq
 
-## TODOs
+## Developing
 
-- Get away from TODOs
-- open the user's browser to grab the refresh token when they start the application
-- create a listener on local host to intercept the refresh token -> use the query params to fetch the authorization code, then exit listener and request the refresh token with authorization code.
-- Setup paper trading
-- Setup a collector for future backtesting feature
-- Setup API to feed into a web dashboard
+### References
 
+The following references may be helpful for the underlying technologies used in this project:
+
+| Name     | Link                                                                                                  |
+| -------- | ----------------------------------------------------------------------------------------------------- |
+| krakenrs | [cargo docs](https://docs.rs/krakenrs/5.2.2/krakenrs/) [crates.io](https://crates.io/crates/krakenrs) |

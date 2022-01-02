@@ -1,2 +1,4 @@
+pub mod kraken;
 pub mod tdameritrade;
-mod types;
+pub mod traits;
+pub mod types;
