@@ -1,18 +1,20 @@
 use bytes::Bytes;
 use clap::Parser;
-use env_logger::Builder;
 use hyper::{
     body::to_bytes,
     service::{make_service_fn, service_fn},
     Body, Request, Server,
 };
-use log::{info, LevelFilter};
+use log::info;
 use route_recognizer::Params;
 use router::Router;
 use std::sync::Arc;
 
 mod handlers;
+#[path = "../logger/mod.rs"]
+mod logger;
 mod router;
+use logger::init_logging;
 
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
 type Response = hyper::Response<hyper::Body>;
@@ -136,25 +138,5 @@ impl Context {
             }
         };
         Ok(serde_json::from_slice(body_bytes)?)
-    }
-}
-
-// init_logging is a helper that parses output from clap's get_matches()
-//   and appropriately sets up the desired log level
-fn init_logging(log_level: usize) {
-    match log_level {
-        0 => env_logger::init(),
-        1 => {
-            Builder::default().filter(None, LevelFilter::Warn).init();
-        }
-        2 => {
-            Builder::default().filter(None, LevelFilter::Info).init();
-        }
-        3 => {
-            Builder::default().filter(None, LevelFilter::Debug).init();
-        }
-        _ => {
-            Builder::default().filter(None, LevelFilter::Trace).init();
-        }
     }
 }

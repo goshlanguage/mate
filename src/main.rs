@@ -1,6 +1,5 @@
 use clap::Parser;
-use env_logger::Builder;
-use log::{info, LevelFilter};
+use log::info;
 use std::{collections::HashMap, thread, time::Duration};
 use tda_sdk::responses::Candle;
 
@@ -8,6 +7,9 @@ mod account;
 use account::kraken::{get_kraken_creds, KrakenAccount};
 use account::tdameritrade::{get_tdameritrade_creds, TDAmeritradeAccount};
 use account::types::AccountType;
+
+mod logger;
+use logger::init_logging;
 
 mod ta;
 use ta::average::{ema, sma};
@@ -108,31 +110,8 @@ impl Mate {
     }
 
     pub fn update_kraken(&self, account: KrakenAccount) {
-        info!(
-            "Bitcoin current data: {}",
-            account.get_pairs("XBTUSD").as_str()
-        );
-        info!("ETH current data: {}", account.get_pairs("ETHUSD").as_str());
-    }
-}
-
-// init_logging is a helper that parses output from clap's get_matches()
-//   and appropriately sets up the desired log level
-fn init_logging(log_level: usize) {
-    match log_level {
-        0 => env_logger::init(),
-        1 => {
-            Builder::default().filter(None, LevelFilter::Warn).init();
-        }
-        2 => {
-            Builder::default().filter(None, LevelFilter::Info).init();
-        }
-        3 => {
-            Builder::default().filter(None, LevelFilter::Debug).init();
-        }
-        _ => {
-            Builder::default().filter(None, LevelFilter::Trace).init();
-        }
+        info!("BTC: {}", account.get_pairs("XXBTZUSD").as_str());
+        info!("ETH: {}", account.get_pairs("XETHZUSD").as_str());
     }
 }
 

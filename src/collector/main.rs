@@ -1,11 +1,21 @@
 use clap::Parser;
-use env_logger::Builder;
-use log::{info, LevelFilter};
-use std::{thread, time::Duration};
+use log::info;
+use serde_json::{json, Map, Value};
+use std::{path::Path, thread, time::Duration};
 
 #[path = "../account/mod.rs"]
 mod account;
 use account::tdameritrade::{get_tdameritrade_creds, TDAmeritradeAccount};
+
+#[path = "../logger/mod.rs"]
+mod logger;
+use logger::init_logging;
+
+mod types;
+use types::MateCandle;
+
+mod state;
+use state::{read_file, write_file};
 
 /// You can see the spec for clap's arg attributes here:
 ///      <https://github.com/clap-rs/clap/blob/v3.0.0-rc.11/examples/derive_ref/README.md#arg-attributes>
@@ -17,6 +27,9 @@ use account::tdameritrade::{get_tdameritrade_creds, TDAmeritradeAccount};
     author
 )]
 struct Args {
+    #[clap(long)]
+    filepath: String,
+
     #[clap(short, long)]
     watch: Vec<String>,
 
@@ -37,35 +50,40 @@ fn main() {
         refresh_token.as_str(),
     );
 
+    let mut data: Map<String, Value> = Map::new();
+    let filepath = format!("{}/data.txt", args.filepath);
+    let datapath = Path::new(filepath.as_str());
+
     loop {
+        if datapath.exists() {
+            data = read_file(format!("{}/data.txt", args.filepath).as_str());
+            info!("Read state file from last iteration")
+        }
+
         for symbol in args.watch.iter() {
             let candles = td_account.get_candles(symbol.to_string());
-            info!("Fetched {} candles for {}", candles.len(), symbol);
+
+            let mut new_mate_candles: Vec<MateCandle> = Vec::new();
+            for candle in candles {
+                let new_mc = MateCandle {
+                    close: candle.close,
+                    datetime: candle.datetime,
+                    high: candle.high,
+                    low: candle.low,
+                    open: candle.open,
+                    volume: candle.volume,
+                };
+                new_mate_candles.push(new_mc);
+            }
+            info!("Fetched data for {}", symbol);
+            data.insert(symbol.clone(), json!(new_mate_candles));
         }
+
+        write_file(format!("{}/data.txt", args.filepath).as_str(), &mut data);
 
         // sleep for an hour, as not to miss any trading window
         let hour = Duration::from_secs(60 * 60);
         // let day = Duration::from_secs(60 * 60 * 24);
         thread::sleep(hour);
-    }
-}
-
-// init_logging is a helper that parses output from clap's get_matches()
-//   and appropriately sets up the desired log level
-fn init_logging(log_level: usize) {
-    match log_level {
-        0 => env_logger::init(),
-        1 => {
-            Builder::default().filter(None, LevelFilter::Warn).init();
-        }
-        2 => {
-            Builder::default().filter(None, LevelFilter::Info).init();
-        }
-        3 => {
-            Builder::default().filter(None, LevelFilter::Debug).init();
-        }
-        _ => {
-            Builder::default().filter(None, LevelFilter::Trace).init();
-        }
     }
 }

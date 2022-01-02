@@ -1,6 +1,6 @@
 use super::traits::get::Get;
 use super::types::*;
-use krakenrs::{KrakenCredentials, KrakenRestAPI, KrakenRestConfig};
+use krakenrs::{AssetTickerInfo, KrakenCredentials, KrakenRestAPI, KrakenRestConfig};
 use serde_json::to_string;
 use std::{convert::TryFrom, env, time::Duration};
 
@@ -65,17 +65,31 @@ impl KrakenAccount {
         let accounts = self.client().get_account_balance().unwrap();
 
         for account in accounts.keys() {
-            balance = format!("{}{:?}\n", balance, accounts.get(account));
+            balance = format!(
+                "{}{}:{:?}\n",
+                balance,
+                account,
+                accounts.get(account).unwrap()
+            );
         }
         balance
     }
 
+    /// when invoking get_pairs, be sure to use the API format that Kraken expects, or you may experience a failure when unwrapping at current
+    /// If you call get_pairs with something that will return a valid response, but the index is different, we'll erroneously try to fetch the wrong index
+    /// thread 'main' panicked at 'called `Option::unwrap()` on a `None` value', src/account/kraken.rs:84:44
+    ///
+    /// ETHUSD is valid, but the appopriate pair is XETHZUSD
+    /// Format: X <Crypto> Z <Currency Pairing>
+    ///
     pub fn get_pairs(&self, pairs: &str) -> String {
         let data = &self
             .client()
             .ticker(vec![pairs.to_string()])
             .expect("api call failed");
-        to_string(&data).unwrap()
+
+        let close_price = &data.get(pairs).unwrap().c[0];
+        close_price.clone()
     }
 }
 
