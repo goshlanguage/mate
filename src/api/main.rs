@@ -1,8 +1,5 @@
 use bytes::Bytes;
 use clap::Parser;
-use diesel::pg::PgConnection;
-use diesel::prelude::*;
-use diesel::r2d2::ConnectionManager;
 use env_logger::Builder;
 use hyper::{
     body::to_bytes,
@@ -18,7 +15,6 @@ mod handlers;
 mod router;
 
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
-type Pool = r2d2::Pool<ConnectionManager<PgConnection>>;
 type Response = hyper::Response<hyper::Body>;
 
 #[derive(Clone, Debug)]
@@ -68,11 +64,6 @@ async fn main() -> Result<(), Error> {
     );
     info!("psql connstring: {}", psql_conn_string.clone());
 
-    let manager = ConnectionManager::<PgConnection>::new(psql_conn_string);
-    let pool = r2d2::Pool::builder()
-        .build(manager)
-        .expect("Failed to create postgres pool.");
-
     let mut router: router::Router = Router::new();
     router.get("/brokers/", Box::new(handlers::brokers_get));
     router.get("/brokers/:broker", Box::new(handlers::brokers_get_one));
@@ -80,18 +71,17 @@ async fn main() -> Result<(), Error> {
     // router.delete("/brokers/", Box::new(handlers::brokers_delete));
 
     let shared_router = Arc::new(router);
-
-    let app_state = AppState {
+    let shared_state: Arc<AppState> = Arc::new(AppState {
         brokers: Vec::new(),
-    };
+    });
 
     let new_service = make_service_fn(move |_| {
         let router_capture = shared_router.clone();
-        let app_state = app_state.clone();
+        let state_capture = shared_state.clone();
+
         async {
             Ok::<_, Error>(service_fn(move |req| {
-                let app_state = app_state.clone();
-                route(router_capture.clone(), req, app_state.clone())
+                route(router_capture.clone(), req, state_capture.clone())
             }))
         }
     });
@@ -109,26 +99,25 @@ async fn main() -> Result<(), Error> {
 async fn route(
     router: Arc<Router>,
     req: Request<hyper::Body>,
-    app_state: AppState,
+    app_state: Arc<AppState>,
 ) -> Result<Response, Error> {
     let found_handler = router.route(req.uri().path(), req.method());
-    let resp = found_handler
-        .handler
-        .invoke(Context::new(app_state, req, found_handler.params))
-        .await;
+
+    let ctx = Context::new(app_state, req, found_handler.params);
+    let resp = found_handler.handler.invoke(ctx).await;
     Ok(resp)
 }
 
 #[derive(Debug)]
 pub struct Context {
-    pub state: AppState,
+    pub state: Arc<AppState>,
     pub req: Request<Body>,
     pub params: Params,
     body_bytes: Option<Bytes>,
 }
 
 impl Context {
-    pub fn new(state: AppState, req: Request<Body>, params: Params) -> Context {
+    pub fn new(state: Arc<AppState>, req: Request<Body>, params: Params) -> Context {
         Context {
             state,
             req,
@@ -168,9 +157,4 @@ fn init_logging(log_level: usize) {
             Builder::default().filter(None, LevelFilter::Trace).init();
         }
     }
-}
-
-pub fn establish_connection(conn_string: String) -> PgConnection {
-    PgConnection::establish(conn_string.as_str())
-        .expect(&format!("Error connecting to {}", conn_string))
 }

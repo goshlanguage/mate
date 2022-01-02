@@ -1,6 +1,7 @@
-use crate::{Context, Response};
+use crate::{AppState, Context, Response};
 use hyper::StatusCode;
 use serde::Deserialize;
+use std::sync::Arc;
 
 #[derive(Deserialize)]
 struct BrokerRequest {
@@ -30,7 +31,10 @@ pub async fn brokers_update(mut ctx: Context) -> Response {
         }
     };
 
-    ctx.state.brokers.push(body.name.clone());
+    let mut old_ctx = ctx.state.brokers.clone();
+    old_ctx.push(body.name);
+    ctx.state = Arc::new(AppState { brokers: old_ctx });
+
     let resp = format!("{{'brokers': '{}'}}", ctx.state.brokers.join(","));
     Response::new(resp.into())
 }
