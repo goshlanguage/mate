@@ -1,49 +1,59 @@
-use clap::{App, Arg, ArgMatches};
+use clap::Parser;
 use env_logger::Builder;
-use log::{error, info, LevelFilter};
-use std::{borrow::Borrow, process::exit};
+use log::{info, LevelFilter};
+use std::{thread, time::Duration};
 
+#[path = "../account/mod.rs"]
+mod account;
+use account::tdameritrade::{get_creds, TDAmeritradeAccount};
+
+/// You can see the spec for clap's arg attributes here:
+///      <https://github.com/clap-rs/clap/blob/v3.0.0-rc.11/examples/derive_ref/README.md#arg-attributes>
+#[derive(Parser, Debug)]
+#[clap(
+    name = "mate-collector",
+    about = "collects data for local caching",
+    version = "0.1.0",
+    author
+)]
+struct Args {
+    #[clap(short, long)]
+    watch: Vec<String>,
+
+    #[clap(short, long, parse(from_occurrences))]
+    verbose: usize,
+}
 fn main() {
-    let matches = App::new("mate-collector")
-        .version("v0.1.0")
-        .about("A data collector for mate")
-        .arg(
-            Arg::with_name("config")
-                .short("c")
-                .long("config")
-                .value_name("FILE")
-                .help("Sets a custom config file")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("v")
-                .short("v")
-                .multiple(true)
-                .help("Sets the level of verbosity"),
-        )
-        .arg(
-            Arg::with_name("source")
-                .short("s")
-                .long("source")
-                .multiple(true)
-                .takes_value(true)
-                .env("MATE_COLLECTOR_SOURCE")
-                .help("configures the collector to use the given source"),
-        )
-        .get_matches();
+    let args = Args::parse();
+    init_logging(args.verbose);
 
-    init_logging(matches.borrow());
+    info!("Starting collector");
 
-    let sources = get_sources(matches.borrow());
-    for source in sources {
-        info!("Loading {}", source);
+    let (client_id, refresh_token) = get_creds();
+    let mut td_account = TDAmeritradeAccount::new(
+        "TDAmeritrade",
+        "My account",
+        client_id.as_str(),
+        refresh_token.as_str(),
+    );
+
+    loop {
+        for symbol in args.watch.iter() {
+            let candles = td_account.get_candles(symbol.to_string());
+            info!("Fetched {} candles for {}", candles.len(), symbol);
+        }
+
+        // sleep for an hour, as not to miss any trading window
+        let hour = Duration::from_secs(60 * 60);
+        // let day = Duration::from_secs(60 * 60 * 24);
+        thread::sleep(hour);
     }
 }
 
 // init_logging is a helper that parses output from clap's get_matches()
 //   and appropriately sets up the desired log level
-fn init_logging(matches: &ArgMatches) {
-    match matches.occurrences_of("v") {
+fn init_logging(log_level: usize) {
+    match log_level {
         0 => env_logger::init(),
         1 => {
             Builder::default().filter(None, LevelFilter::Warn).init();
@@ -58,28 +68,4 @@ fn init_logging(matches: &ArgMatches) {
             Builder::default().filter(None, LevelFilter::Trace).init();
         }
     }
-}
-
-fn get_sources(matches: &ArgMatches) -> Vec<String> {
-    let mut valid_sources: Vec<String> = vec![];
-
-    if matches.occurrences_of("source") > 0 {
-        let sources: Vec<_> = matches.values_of("source").unwrap().collect();
-        for source in sources {
-            match source {
-                "tdameritrade" => {
-                    info!("enabling tdameritrade");
-                    valid_sources.push(source.to_string());
-                }
-                _ => {
-                    error!("unsupported source {}, exiting", source);
-                }
-            }
-        }
-    } else {
-        error!("No active data source loaded. Please pass a source via the --source flag. Exiting");
-        exit(1);
-    }
-
-    valid_sources
 }

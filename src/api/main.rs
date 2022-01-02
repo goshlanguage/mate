@@ -1,5 +1,8 @@
 use bytes::Bytes;
 use clap::Parser;
+use diesel::pg::PgConnection;
+use diesel::prelude::*;
+use diesel::r2d2::ConnectionManager;
 use env_logger::Builder;
 use hyper::{
     body::to_bytes,
@@ -10,21 +13,21 @@ use log::{info, LevelFilter};
 use route_recognizer::Params;
 use router::Router;
 use std::sync::Arc;
-use tokio_postgres::NoTls;
 
 mod handlers;
 mod router;
 
-type Response = hyper::Response<hyper::Body>;
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
+type Pool = r2d2::Pool<ConnectionManager<PgConnection>>;
+type Response = hyper::Response<hyper::Body>;
 
 #[derive(Clone, Debug)]
 pub struct AppState {
     pub brokers: Vec<String>,
 }
 
-// You can see the spec for clap's arg attributes here:
-//      https://github.com/clap-rs/clap/blob/v3.0.0-rc.11/examples/derive_ref/README.md#arg-attributes
+/// You can see the spec for clap's arg attributes here:
+///      <https://github.com/clap-rs/clap/blob/v3.0.0-rc.11/examples/derive_ref/README.md#arg-attributes>
 #[derive(Parser, Debug)]
 #[clap(about, version, author)]
 struct Args {
@@ -56,24 +59,19 @@ async fn main() -> Result<(), Error> {
     init_logging(args.verbose);
 
     let psql_conn_string = format!(
-        "host={} port={} user={} password={}",
-        args.postgres_hostname, args.postgres_port, args.postgres_user, args.postgres_password
+        "postgresql://{}:{}@{}:{}/{}",
+        args.postgres_user,
+        args.postgres_password,
+        args.postgres_hostname,
+        args.postgres_port,
+        args.postgres_database
     );
-    info!("psql connstring: {}", psql_conn_string);
+    info!("psql connstring: {}", psql_conn_string.clone());
 
-    // Connect to the database.
-    let (client, connection) = tokio_postgres::connect(psql_conn_string.as_str(), NoTls).await?;
-
-    tokio::spawn(async move {
-        if let Err(e) = connection.await {
-            eprintln!("connection error: {}", e);
-        }
-    });
-
-    let rows = client.query("SELECT $1::TEXT", &[&"hello world"]).await?;
-
-    let value: &str = rows[0].get(0);
-    info!("{}", value);
+    let manager = ConnectionManager::<PgConnection>::new(psql_conn_string);
+    let pool = r2d2::Pool::builder()
+        .build(manager)
+        .expect("Failed to create postgres pool.");
 
     let mut router: router::Router = Router::new();
     router.get("/brokers/", Box::new(handlers::brokers_get));
@@ -83,15 +81,16 @@ async fn main() -> Result<(), Error> {
 
     let shared_router = Arc::new(router);
 
-    let state = Vec::new();
-    let new_service = make_service_fn(move |_| {
-        let app_state = AppState {
-            brokers: state.clone(),
-        };
+    let app_state = AppState {
+        brokers: Vec::new(),
+    };
 
+    let new_service = make_service_fn(move |_| {
         let router_capture = shared_router.clone();
+        let app_state = app_state.clone();
         async {
             Ok::<_, Error>(service_fn(move |req| {
+                let app_state = app_state.clone();
                 route(router_capture.clone(), req, app_state.clone())
             }))
         }
@@ -169,4 +168,9 @@ fn init_logging(log_level: usize) {
             Builder::default().filter(None, LevelFilter::Trace).init();
         }
     }
+}
+
+pub fn establish_connection(conn_string: String) -> PgConnection {
+    PgConnection::establish(conn_string.as_str())
+        .expect(&format!("Error connecting to {}", conn_string))
 }

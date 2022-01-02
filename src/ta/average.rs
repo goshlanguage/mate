@@ -49,7 +49,7 @@ pub fn sma(candles: &[Candle], start: usize, period: usize) -> f64 {
 }
 
 // round is a helper for f64 that rounds the number to a decimal point notation used for representing money
-fn round(i: f64) -> f64 {
+pub fn round(i: f64) -> f64 {
     (i * 100.0).round() / 100.0
 }
 
