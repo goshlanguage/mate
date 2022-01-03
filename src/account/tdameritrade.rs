@@ -71,7 +71,7 @@ impl TDAmeritradeAccount {
     /// get_candles is responsible for fetching any new candles as necessary
     /// As is the case for EMA 20 and higher, we default to importing 3 years of daily data
     /// to be able to calculate a more precise EMA.
-    pub fn get_candles(&mut self, symbol: String) -> Vec<Candle> {
+    pub fn get_candles(&self, symbol: String) -> Vec<Candle> {
         // https://developer.tdameritrade.com/price-history/apis/get/marketdata/%7Bsymbol%7D/pricehistory
         let params = GetPriceHistoryParams {
             end_date: None,

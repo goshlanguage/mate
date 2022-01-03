@@ -1,7 +1,7 @@
 use super::traits::get::Get;
 use super::types::*;
-use krakenrs::{AssetTickerInfo, KrakenCredentials, KrakenRestAPI, KrakenRestConfig};
-use serde_json::to_string;
+use krakenrs::{KrakenCredentials, KrakenRestAPI, KrakenRestConfig};
+use serde_json::{json, Map, Value};
 use std::{convert::TryFrom, env, time::Duration};
 
 /// # KrakenAccount
@@ -90,6 +90,20 @@ impl KrakenAccount {
 
         let close_price = &data.get(pairs).unwrap().c[0];
         close_price.clone()
+    }
+
+    pub fn get_ticks(&self, pairs: Vec<String>) -> Map<String, Value> {
+        let mut data: Map<String, Value> = Map::new();
+
+        let api_data = &self.client().ticker(pairs).expect("api call failed");
+        for pair in api_data.keys().cloned() {
+            let tick_data = api_data.get(&pair).unwrap();
+            let value = json!(tick_data);
+
+            data.insert(pair, value);
+        }
+
+        data
     }
 }
 
