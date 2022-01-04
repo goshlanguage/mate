@@ -8,8 +8,6 @@ use accounts::kraken::KrakenAccount;
 use accounts::tdameritrade::TDAmeritradeAccount;
 use accounts::types::AccountType;
 
-use chrono;
-
 /// TODO
 ///   Fix this broken module situation
 #[path = "./state/file.rs"]
