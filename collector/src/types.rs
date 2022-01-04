@@ -16,7 +16,6 @@ extern crate chrono;
 mod state;
 use state::*;
 
-
 pub struct Collector {
     pub conf: CollectorConfig,
     pub accounts: Vec<AccountType>,
@@ -195,7 +194,7 @@ enum PeriodInterval {
     Day,
     Month,
     Year,
-    YTD,
+    Ytd,
 }
 
 /// FrequencyInterval defines the frequency that each candle represents
@@ -209,7 +208,7 @@ enum FrequencyInterval {
 
 /// Scaffolds out our collector filesystem structure if needed
 fn ensure_filesystem_tree_exists(filepath: &str) {
-    ensure_dir_exists(format!("{}", filepath).as_str());
+    ensure_dir_exists(filepath);
     ensure_dir_exists(format!("{}/equity/", filepath).as_str());
     ensure_dir_exists(format!("{}/equity/daily", filepath).as_str());
     ensure_dir_exists(format!("{}/crypto/", filepath).as_str());

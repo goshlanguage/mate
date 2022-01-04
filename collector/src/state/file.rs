@@ -8,7 +8,7 @@ pub fn read_file(file_name: &str) -> Value {
     file.read_to_string(&mut data).unwrap();
 
     let json: Value = serde_json::from_str(&data).unwrap();
-    json.clone()
+    json
 }
 
 pub fn read_map_from_file(file_name: &str) -> Map<String, Value> {

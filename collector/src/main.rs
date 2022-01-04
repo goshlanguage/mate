@@ -47,8 +47,7 @@ fn init(args: Args) -> Collector {
         filepath: args.filepath,
     };
 
-    let collector = Collector::new(conf);
-    collector
+    Collector::new(conf)
 }
 
 fn main() {

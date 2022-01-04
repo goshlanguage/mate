@@ -31,7 +31,7 @@ impl KrakenAccount {
         };
 
         let conf = KrakenRestConfig {
-            creds: creds,
+            creds,
             timeout: Duration::new(30, 0),
         };
 
@@ -53,7 +53,7 @@ impl KrakenAccount {
         };
 
         let conf = KrakenRestConfig {
-            creds: creds,
+            creds,
             timeout: Duration::new(30, 0),
         };
 

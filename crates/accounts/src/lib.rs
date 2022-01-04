@@ -8,7 +8,6 @@ use types::AccountType;
 
 use std::env;
 
-
 /// new_account is an account factory
 pub fn new_account(
     name: &str,
@@ -22,7 +21,7 @@ pub fn new_account(
 
     match ac_type.to_lowercase().as_str() {
         "tdameritrade" => {
-            if key == "" || secret == "" {
+            if key.is_empty() || secret.is_empty() {
                 let (env_id, env_secret) = get_tdameritrade_creds();
                 client_id = env_id;
                 client_secret = env_secret;
@@ -35,7 +34,7 @@ pub fn new_account(
             )))
         }
         "kraken" => {
-            if key == "" || secret == "" {
+            if key.is_empty() || secret.is_empty() {
                 let (env_id, env_secret) = get_kraken_creds();
                 client_id = env_id;
                 client_secret = env_secret;
