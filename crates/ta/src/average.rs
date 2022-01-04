@@ -7,8 +7,6 @@ use tda_sdk::responses::Candle;
 // You can cross check https://www.tradingview.com/symbols/$exchange-$symbol/technicals/ for validity/manual checking
 // eg: https://www.tradingview.com/symbols/NASDAQ-MSFT/technicals/
 //
-// TODO Fix no boundary checking
-// TODO check for NaN
 // returns computed ema as f64
 pub fn ema(candles: &[Candle], period: i32) -> f64 {
     let sma_i = (period) as usize;

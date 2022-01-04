@@ -1,13 +1,14 @@
 use clap::Parser;
-use env_logger::Builder;
-use log::{info, LevelFilter};
+use log::info;
 use std::{collections::HashMap, thread, time::Duration};
 use tda_sdk::responses::Candle;
 
-mod account;
-use account::tdameritrade::{get_creds, TDAmeritradeAccount};
+use accounts::kraken::KrakenAccount;
+use accounts::tdameritrade::TDAmeritradeAccount;
+use accounts::types::AccountType;
 
-mod ta;
+use matelog::init_logging;
+
 use ta::average::{ema, sma};
 
 /// You can see the spec for clap's arg attributes here:
@@ -20,6 +21,9 @@ use ta::average::{ema, sma};
     author
 )]
 struct Args {
+    #[clap(short, long, default_value = "tdameritrade")]
+    accounts: Vec<String>,
+
     #[clap(short, long, parse(from_occurrences))]
     verbose: usize,
 }
@@ -27,70 +31,57 @@ struct Args {
 // mate makes use of the tda-sdk crate for access to a brokerage API
 // https://github.com/rideron89/tda-sdk-rs
 pub struct Mate {
-    account: TDAmeritradeAccount,
+    accounts: Vec<AccountType>,
     candles: HashMap<String, Vec<Candle>>,
     symbols: Vec<String>,
 }
 
 impl Mate {
-    pub fn default() -> Self {
-        let (client_id, refresh_token) = get_creds();
-        let td_account = TDAmeritradeAccount::new(
-            "TDAmeritrade",
-            "My account",
-            client_id.as_str(),
-            refresh_token.as_str(),
-        );
-
-        Mate {
-            account: td_account,
+    pub fn new(accounts: Vec<String>) -> Mate {
+        let mut mate = Mate {
+            accounts: Vec::new(),
             candles: HashMap::new(),
-            symbols: vec![],
+            symbols: Vec::new(),
+        };
+
+        for account in accounts {
+            let new_account =
+                accounts::new_account(account.as_str(), account.as_str(), "", "", "").unwrap();
+            mate.accounts.push(new_account);
+        }
+
+        mate
+    }
+
+    pub fn default() -> Self {
+        Mate {
+            accounts: Vec::new(),
+            candles: HashMap::new(),
+            symbols: Vec::new(),
         }
     }
 
     pub fn status(&self) {
-        self.account.get_account_ids();
-    }
-}
-
-// init_logging is a helper that parses output from clap's get_matches()
-//   and appropriately sets up the desired log level
-fn init_logging(log_level: usize) {
-    match log_level {
-        0 => env_logger::init(),
-        1 => {
-            Builder::default().filter(None, LevelFilter::Warn).init();
-        }
-        2 => {
-            Builder::default().filter(None, LevelFilter::Info).init();
-        }
-        3 => {
-            Builder::default().filter(None, LevelFilter::Debug).init();
-        }
-        _ => {
-            Builder::default().filter(None, LevelFilter::Trace).init();
+        for account in &self.accounts {
+            match account {
+                AccountType::TDAmeritradeAccount(account) => {
+                    info!("Found TDAmeritrade Accounts: {}", account.get_account_ids())
+                }
+                AccountType::KrakenAccount(account) => {
+                    info!("Found Kraken Accounts: {}", account.get_account_balances());
+                }
+            }
         }
     }
-}
 
-fn main() {
-    let args = Args::parse();
-    init_logging(args.verbose);
-
-    let mut mate = Mate::default();
-    mate.symbols = vec!["MSFT".to_string()];
-
-    loop {
-        for symbol in &mate.symbols {
-            mate.candles.insert(
-                symbol.to_string(),
-                mate.account.get_candles(symbol.to_string()),
-            );
+    pub fn update_td(&mut self, account: TDAmeritradeAccount) {
+        let symbols = self.symbols.clone();
+        for symbol in symbols {
+            self.candles
+                .insert(symbol.to_string(), account.get_candles(symbol.to_string()));
         }
-        mate.status();
 
-        let msft_candles = mate.candles.get("MSFT").unwrap();
+        let msft_candles = self.candles.get("MSFT").unwrap();
 
         let sma20 = sma(msft_candles, 0, 20);
         let sma50 = sma(msft_candles, 0, 50);
@@ -109,6 +100,34 @@ fn main() {
                 info!("set stop loss at 95%");
             } else {
                 info!("sell");
+            }
+        }
+    }
+
+    pub fn update_kraken(&self, account: KrakenAccount) {
+        info!("BTC: {}", account.get_pairs("XXBTZUSD").as_str());
+        info!("ETH: {}", account.get_pairs("XETHZUSD").as_str());
+    }
+}
+
+fn main() {
+    let args = Args::parse();
+    init_logging(args.verbose);
+
+    let mut mate = Mate::new(args.accounts);
+    mate.symbols = vec!["MSFT".to_string()];
+
+    loop {
+        mate.status();
+
+        for account in mate.accounts.clone() {
+            match account {
+                AccountType::TDAmeritradeAccount(account) => {
+                    mate.update_td(account);
+                }
+                AccountType::KrakenAccount(account) => {
+                    mate.update_kraken(account);
+                }
             }
         }
 
