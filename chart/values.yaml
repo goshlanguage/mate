@@ -25,6 +25,7 @@ accounts:
 
 collector:
   enabled: true
+  debug: true
 
   stocks:
   - MSFT

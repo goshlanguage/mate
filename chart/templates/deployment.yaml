@@ -58,6 +58,9 @@ spec:
         command:
         - mate-collector
         args:
+        {{- if .Values.collector.debug }}
+        - -vv
+        {{- end }}
         {{- if .Values.accounts.tdameritrade.enabled }}
         - -a
         - tdameritrade
