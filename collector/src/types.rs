@@ -8,7 +8,7 @@ use accounts::kraken::KrakenAccount;
 use accounts::tdameritrade::TDAmeritradeAccount;
 use accounts::types::AccountType;
 
-extern crate chrono;
+use chrono;
 
 /// TODO
 ///   Fix this broken module situation
