@@ -3,15 +3,12 @@ use log::info;
 use std::{collections::HashMap, thread, time::Duration};
 use tda_sdk::responses::Candle;
 
-mod account;
-use account::kraken::{get_kraken_creds, KrakenAccount};
-use account::tdameritrade::{get_tdameritrade_creds, TDAmeritradeAccount};
-use account::types::AccountType;
+use accounts::kraken::KrakenAccount;
+use accounts::tdameritrade::TDAmeritradeAccount;
+use accounts::types::AccountType;
 
-mod logger;
-use logger::init_logging;
+use matelog::init_logging;
 
-mod ta;
 use ta::average::{ema, sma};
 
 /// You can see the spec for clap's arg attributes here:
@@ -24,6 +21,9 @@ use ta::average::{ema, sma};
     author
 )]
 struct Args {
+    #[clap(short, long, default_value = "tdameritrade")]
+    accounts: Vec<String>,
+
     #[clap(short, long, parse(from_occurrences))]
     verbose: usize,
 }
@@ -37,32 +37,27 @@ pub struct Mate {
 }
 
 impl Mate {
-    pub fn default() -> Self {
-        let (client_id, refresh_token) = get_tdameritrade_creds();
-        let td_account = TDAmeritradeAccount::new(
-            "TDAmeritrade",
-            "My td ameritrade account",
-            client_id.as_str(),
-            refresh_token.as_str(),
-        );
-
-        let (client_key, client_secret) = get_kraken_creds();
-        let kraken_account = KrakenAccount::new(
-            "Kraken",
-            "My kraken account",
-            client_key.as_str(),
-            client_secret.as_str(),
-        );
-
-        let accounts: Vec<AccountType> = vec![
-            AccountType::TDAmeritradeAccount(td_account),
-            AccountType::KrakenAccount(kraken_account),
-        ];
-
-        Mate {
-            accounts: accounts,
+    pub fn new(accounts: Vec<String>) -> Mate {
+        let mut mate = Mate {
+            accounts: Vec::new(),
             candles: HashMap::new(),
-            symbols: vec![],
+            symbols: Vec::new(),
+        };
+
+        for account in accounts {
+            let new_account =
+                accounts::new_account(account.as_str(), account.as_str(), "", "", "").unwrap();
+            mate.accounts.push(new_account);
+        }
+
+        mate
+    }
+
+    pub fn default() -> Self {
+        Mate {
+            accounts: Vec::new(),
+            candles: HashMap::new(),
+            symbols: Vec::new(),
         }
     }
 
@@ -79,7 +74,7 @@ impl Mate {
         }
     }
 
-    pub fn update_td(&mut self, mut account: TDAmeritradeAccount) {
+    pub fn update_td(&mut self, account: TDAmeritradeAccount) {
         let symbols = self.symbols.clone();
         for symbol in symbols {
             self.candles
@@ -119,7 +114,7 @@ fn main() {
     let args = Args::parse();
     init_logging(args.verbose);
 
-    let mut mate = Mate::default();
+    let mut mate = Mate::new(args.accounts);
     mate.symbols = vec!["MSFT".to_string()];
 
     loop {
@@ -133,7 +128,6 @@ fn main() {
                 AccountType::KrakenAccount(account) => {
                     mate.update_kraken(account);
                 }
-                _ => info!("Unknown account found"),
             }
         }
 

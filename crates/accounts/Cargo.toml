@@ -1,0 +1,10 @@
+[package]
+name = "accounts"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+tda-sdk = "0.1.2"
+krakenrs = "5.2.2"
+serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
+log = "~0.4.14"

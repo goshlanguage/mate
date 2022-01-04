@@ -3,6 +3,16 @@
 version = 3
 
 [[package]]
+name = "accounts"
+version = "0.1.0"
+dependencies = [
+ "krakenrs",
+ "log",
+ "serde_json",
+ "tda-sdk",
+]
+
+[[package]]
 name = "aho-corasick"
 version = "0.7.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -19,6 +29,10 @@ checksum = "d52a9bb7ec0cf484c551830a7ce27bd20d67eac647e1befb56b0be4ee39a55d2"
 dependencies = [
  "winapi",
 ]
+
+[[package]]
+name = "api"
+version = "0.1.0"
 
 [[package]]
 name = "arrayvec"
@@ -736,20 +750,33 @@ checksum = "a3e378b66a060d48947b590737b30a1be76706c8dd7b8ba0f2fe3989c68a853f"
 name = "mate"
 version = "0.1.0"
 dependencies = [
+ "accounts",
  "async-trait",
  "bytes",
  "chrono",
  "clap 3.0.0-rc.11",
- "env_logger",
  "futures",
  "hyper",
- "krakenrs",
  "log",
+ "matelog",
  "route-recognizer",
  "serde",
  "serde_json",
+ "ta",
  "tda-sdk",
  "tokio",
+]
+
+[[package]]
+name = "mate-collector"
+version = "0.1.0"
+
+[[package]]
+name = "matelog"
+version = "0.1.0"
+dependencies = [
+ "env_logger",
+ "log",
 ]
 
 [[package]]
@@ -1513,6 +1540,13 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-xid",
+]
+
+[[package]]
+name = "ta"
+version = "0.1.0"
+dependencies = [
+ "tda-sdk",
 ]
 
 [[package]]

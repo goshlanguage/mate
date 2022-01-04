@@ -11,10 +11,8 @@ use router::Router;
 use std::sync::Arc;
 
 mod handlers;
-#[path = "../logger/mod.rs"]
-mod logger;
 mod router;
-use logger::init_logging;
+use matelog::init_logging;
 
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
 type Response = hyper::Response<hyper::Body>;

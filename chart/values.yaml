@@ -1,3 +1,5 @@
+env: staging
+
 image:
   repo: ghcr.io/goshlanguage/mate
   tag: latest
@@ -10,6 +12,15 @@ image:
 tdameritrade:
   enabled: true
   existingSecret: tda-creds
+
+# You must create a secret containing the env vars `KRAKEN_API_KEY`
+# and `KRAKEN_API_SECRET` to pass into mate to connect to kraken
+#
+# This can be created via :
+# kubectl create secret generic kraken-creds --from-literal=KRAKEN_API_KEY=$KRAKEN_API_KEY --from-literal=KRAKEN_API_SECRET=$KRAKEN_API_SECRET
+kraken:
+  enabled: true
+  existingSecret: kraken-creds
 
 s3:
   enabled: true

@@ -2,7 +2,7 @@ use super::traits::get::Get;
 use super::types::*;
 use krakenrs::{KrakenCredentials, KrakenRestAPI, KrakenRestConfig};
 use serde_json::{json, Map, Value};
-use std::{convert::TryFrom, env, time::Duration};
+use std::{convert::TryFrom, time::Duration};
 
 /// # KrakenAccount
 ///  KrakenAccount represents an exchange account
@@ -60,6 +60,7 @@ impl KrakenAccount {
         KrakenRestAPI::try_from(conf).expect("could not connect to Kraken")
     }
 
+    #[allow(dead_code)]
     pub fn get_account_balances(&self) -> String {
         let mut balance = String::new();
         let accounts = self.client().get_account_balance().unwrap();
@@ -82,6 +83,7 @@ impl KrakenAccount {
     /// ETHUSD is valid, but the appopriate pair is XETHZUSD
     /// Format: X <Crypto> Z <Currency Pairing>
     ///
+    #[allow(dead_code)]
     pub fn get_pairs(&self, pairs: &str) -> String {
         let data = &self
             .client()
@@ -92,40 +94,24 @@ impl KrakenAccount {
         close_price.clone()
     }
 
-    pub fn get_ticks(&self, pairs: Vec<String>) -> Map<String, Value> {
+    pub fn get_ticks(&self, pairs: Vec<String>) -> Result<Map<String, Value>, &'static str> {
         let mut data: Map<String, Value> = Map::new();
 
-        let api_data = &self.client().ticker(pairs).expect("api call failed");
-        for pair in api_data.keys().cloned() {
-            let tick_data = api_data.get(&pair).unwrap();
-            let value = json!(tick_data);
+        let api_result = &self.client().ticker(pairs);
+        match api_result {
+            Ok(api_data) => {
+                for pair in api_data.keys().cloned() {
+                    let tick_data = api_data.get(&pair).unwrap();
+                    let value = json!(tick_data);
 
-            data.insert(pair, value);
+                    data.insert(pair, value);
+                }
+
+                Ok(data)
+            }
+            Err(_e) => Err("Failed to collect pairs, review your pairs and ensure they match https://api.kraken.com/0/public/Assets"),
         }
-
-        data
     }
-}
-
-// get_creds looks for `KRAKEN_API_KEY` and `KRAKEN_API_SECRET` environment variables and panics if they aren't present.
-pub fn get_kraken_creds() -> (String, String) {
-    let client_key = match env::var("KRAKEN_API_KEY") {
-        Ok(val) => val,
-        Err(e) => panic!(
-            "Didn't find the KRAKEN_API_KEY env var, please set this and try again. {}",
-            e
-        ),
-    };
-
-    let client_secret = match env::var("KRAKEN_API_SECRET") {
-        Ok(val) => val,
-        Err(e) => panic!(
-            "Didn't find the KRAKEN_API_SECRET env var, please set this and try again. {}",
-            e
-        ),
-    };
-
-    (client_key, client_secret)
 }
 
 impl Get for KrakenAccount {}

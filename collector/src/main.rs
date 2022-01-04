@@ -2,9 +2,7 @@ use clap::Parser;
 use log::info;
 use std::{thread, time::Duration};
 
-#[path = "../logger/mod.rs"]
-mod logger;
-use logger::init_logging;
+use matelog::init_logging;
 
 mod types;
 use types::{Collector, CollectorConfig};
@@ -28,6 +26,9 @@ struct Args {
     #[clap(long)]
     filepath: String,
 
+    #[clap(short, long, default_value_t = 3600)]
+    poll_seconds: u64,
+
     #[clap(short, long)]
     stock: Vec<String>,
 
@@ -41,6 +42,7 @@ fn init(args: Args) -> Collector {
     let conf = CollectorConfig {
         accounts: args.accounts,
         crypto_watchlist: args.crypto,
+        poll_seconds: args.poll_seconds,
         stock_watchlist: args.stock,
         filepath: args.filepath,
     };
@@ -60,9 +62,7 @@ fn main() {
 
         info!("Time to sleep (¬‿¬)");
 
-        // sleep for an hour, as not to miss any trading window
-        let hour = Duration::from_secs(60 * 60);
-        // let day = Duration::from_secs(60 * 60 * 24);
-        thread::sleep(hour);
+        let poll_duration = Duration::from_secs(collector.conf.poll_seconds);
+        thread::sleep(poll_duration);
     }
 }

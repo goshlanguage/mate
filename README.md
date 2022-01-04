@@ -55,10 +55,44 @@ To register an account and get API access, you can either see [upstream document
 
 ## Developing
 
+### Data
+
+Data is represented with tick data, or OHLC candles, then serialized into JSON.
+
+_Equities_:
+
+```
+[
+  {
+    'close': 39.435,
+    'datetime': 1546236000000,
+    'high': 39.84,
+    'low': 39.12,
+    'open': 39.6325,
+    'volume': 140013864
+  }
+]
+```
+
+This is derived from the response of the [`pricehistory` endpoint](https://developer.tdameritrade.com/price-history/apis/get/marketdata/%7Bsymbol%7D/pricehistory) of the TD Ameritrade API
+
+_Crypto_:
+
+```
+{'1641237335': {'a': ['0.169609000', '221449', '221449.000'],
+                'b': ['0.169608900', '268', '268.000'],
+                'c': ['0.169608900', '67.14677906']}
+}
+```
+
+JSON contains a list of epoch timestamps as strings, containing an object representing the ask, bid, and close of each tick.
+This model is derived from the `ticker` endpoint](https://docs.kraken.com/rest/#operation/getTickerInformation) response that comes from the Kraken API
+
 ### References
 
 The following references may be helpful for the underlying technologies used in this project:
 
-| Name     | Link                                                                                                  |
-| -------- | ----------------------------------------------------------------------------------------------------- |
-| krakenrs | [cargo docs](https://docs.rs/krakenrs/5.2.2/krakenrs/) [crates.io](https://crates.io/crates/krakenrs) |
+| Name     | Link                                                                                                                   |
+| -------- | ---------------------------------------------------------------------------------------------------------------------- |
+| clap     | [derive arg reference](https://github.com/clap-rs/clap/blob/v3.0.0-rc.11/examples/derive_ref/README.md#arg-attributes) |
+| krakenrs | [cargo docs](https://docs.rs/krakenrs/5.2.2/krakenrs/) [crates.io](https://crates.io/crates/krakenrs)                  |

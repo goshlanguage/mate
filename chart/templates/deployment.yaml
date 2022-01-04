@@ -25,3 +25,66 @@ spec:
         {{- end }}
       imagePullSecrets:
       - name: regcred
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: mate-collector
+  name: mate-collector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mate-collector
+  template:
+    metadata:
+      labels:
+        app: mate-collector
+    spec:
+      containers:
+      - name: mate-collector
+        command:
+        - mate-collector
+        args:
+        {{- if .Values.tdameritrade.enabled }}
+        - -a
+        - tdameritrade
+        {{- end }}
+        {{- if .Values.kraken.enabled }}
+        - -a
+        - kraken
+        {{- end }}
+        - -s
+        - MSFT
+        - -s
+        - AAPL
+        - -s
+        - EQIX
+        - -s
+        - QQQ
+        - -s
+        - TQQQ
+        - -s
+        - SQQQ
+        - -c
+        - XETHZUSD
+        image: "{{ .Values.image.repo }}:{{ .Values.image.tag }}"
+        {{- if eq .Values.env "staging" }}
+        imagePullPolicy: Always
+        {{- else }}
+        imagePullPolicy: IfNotPresent
+        {{- end }}
+        {{- if or .Values.tdameritrade.enabled .Values.kraken.enabled }}
+        envFrom:
+        {{- if .Values.tdameritrade.enabled }}
+        - secretRef:
+            name: {{ .Values.tdameritrade.existingSecret }}
+        {{- end }}
+        {{- if .Values.kraken.enabled }}
+        - secretRef:
+            name: {{ .Values.kraken.existingSecret }}
+        {{- end }}
+        {{- end }}
+      imagePullSecrets:
+      - name: regcred

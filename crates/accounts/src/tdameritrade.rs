@@ -1,7 +1,6 @@
 use super::traits::get::Get;
 use super::types::*;
-use log::info;
-use std::env;
+use log::{error, info};
 use tda_sdk::{
     params::{GetAccountsParams, GetPriceHistoryParams},
     responses::{Candle, SecuritiesAccount},
@@ -50,6 +49,7 @@ impl TDAmeritradeAccount {
         client
     }
 
+    #[allow(dead_code)]
     pub fn get_account_ids(&self) -> String {
         info!("Returning account ids");
         let accounts = self
@@ -95,27 +95,35 @@ impl TDAmeritradeAccount {
 
         resp.candles
     }
-}
 
-// get_creds looks for `TDA_CLIENT_ID` and `TDA_REFRESH_TOKEN` environment variables and panics if they aren't present.
-pub fn get_tdameritrade_creds() -> (String, String) {
-    let client_id = match env::var("TDA_CLIENT_ID") {
-        Ok(val) => val,
-        Err(e) => panic!(
-            "Didn't find the TDA_CLIENT_ID env var, please set this and try again. {}",
-            e
-        ),
-    };
+    /// get_daily_candle is responsible for fetching a daily candle for a given symbol
+    pub fn get_daily_candle(&self, symbol: String) -> Result<Candle, &'static str> {
+        // https://developer.tdameritrade.com/price-history/apis/get/marketdata/%7Bsymbol%7D/pricehistory
+        let params = GetPriceHistoryParams {
+            end_date: None,
+            frequency_type: Some(String::from("daily")),
+            frequency: Some(String::from("1")),
+            need_extended_hours_data: None,
+            period_type: Some(String::from("month")),
+            period: Some(String::from("1")),
+            start_date: None,
+        };
 
-    let refresh_token = match env::var("TDA_REFRESH_TOKEN") {
-        Ok(val) => val,
-        Err(e) => panic!(
-            "Didn't find the TDA_REFRESH_TOKEN env var, please set this and try again. {}",
-            e
-        ),
-    };
+        let history = self.client().get_price_history(symbol.as_str(), params);
 
-    (client_id, refresh_token)
+        let resp = match history {
+            Ok(val) => val,
+            Err(e) => {
+                error!("Failed to get price history: {}", e.to_string());
+                return Err("Failed to get price history");
+            }
+        };
+
+        match resp.candles.len() {
+            0 => Err("No candles found"),
+            n => Ok(resp.candles[n - 1]),
+        }
+    }
 }
 
 impl Get for TDAmeritradeAccount {}
