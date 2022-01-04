@@ -17,15 +17,26 @@ spec:
       containers:
       - name: mate
         image: "{{ .Values.image.repo }}:{{ .Values.image.tag }}"
+        {{- if eq .Values.env "staging" }}
+        imagePullPolicy: Always
+        {{- else }}
         imagePullPolicy: IfNotPresent
-        {{- if .Values.tdameritrade.enabled }}
+        {{- end }}
+        {{- if or .Values.accounts.tdameritrade.enabled .Values.accounts.kraken.enabled }}
         envFrom:
+        {{- if .Values.accounts.tdameritrade.enabled }}
         - secretRef:
-            name: {{ .Values.tdameritrade.existingSecret }}
+            name: {{ .Values.accounts.tdameritrade.existingSecret }}
+        {{- end }}
+        {{- if .Values.accounts.kraken.enabled }}
+        - secretRef:
+            name: {{ .Values.accounts.kraken.existingSecret }}
+        {{- end }}
         {{- end }}
       imagePullSecrets:
       - name: regcred
 ---
+{{- if .Values.collector.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -47,44 +58,50 @@ spec:
         command:
         - mate-collector
         args:
-        {{- if .Values.tdameritrade.enabled }}
+        {{- if .Values.collector.debug }}
+        - -vv
+        {{- end }}
+        {{- if .Values.accounts.tdameritrade.enabled }}
         - -a
         - tdameritrade
         {{- end }}
-        {{- if .Values.kraken.enabled }}
+        {{- if .Values.accounts.kraken.enabled }}
         - -a
         - kraken
         {{- end }}
+        {{- if .Values.collector.pollDuration }}
+        - -p
+        - {{ .Values.collector.pollDuration | quote }}
+        {{- end }}
+        {{- if .Values.collector.filepath }}
+        - --filepath
+        - {{ .Values.collector.filepath }}
+        {{- end }}
+        {{- range .Values.collector.stocks }}
         - -s
-        - MSFT
-        - -s
-        - AAPL
-        - -s
-        - EQIX
-        - -s
-        - QQQ
-        - -s
-        - TQQQ
-        - -s
-        - SQQQ
+        - {{ . }}
+        {{- end }}
+        {{- range .Values.collector.crypto }}
         - -c
-        - XETHZUSD
+        - {{ . }}
+        {{- end }}
         image: "{{ .Values.image.repo }}:{{ .Values.image.tag }}"
         {{- if eq .Values.env "staging" }}
         imagePullPolicy: Always
         {{- else }}
         imagePullPolicy: IfNotPresent
         {{- end }}
-        {{- if or .Values.tdameritrade.enabled .Values.kraken.enabled }}
+        {{- if or .Values.accounts.tdameritrade.enabled .Values.accounts.kraken.enabled }}
         envFrom:
-        {{- if .Values.tdameritrade.enabled }}
+        {{- if .Values.accounts.tdameritrade.enabled }}
         - secretRef:
-            name: {{ .Values.tdameritrade.existingSecret }}
+            name: {{ .Values.accounts.tdameritrade.existingSecret }}
         {{- end }}
-        {{- if .Values.kraken.enabled }}
+        {{- if .Values.accounts.kraken.enabled }}
         - secretRef:
-            name: {{ .Values.kraken.existingSecret }}
+            name: {{ .Values.accounts.kraken.existingSecret }}
         {{- end }}
         {{- end }}
       imagePullSecrets:
       - name: regcred
+{{- end }}

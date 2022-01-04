@@ -8,8 +8,6 @@ use accounts::kraken::KrakenAccount;
 use accounts::tdameritrade::TDAmeritradeAccount;
 use accounts::types::AccountType;
 
-extern crate chrono;
-
 /// TODO
 ///   Fix this broken module situation
 #[path = "./state/file.rs"]
@@ -77,7 +75,7 @@ impl Collector {
                 info!("Read state file from {}", filepath);
             };
 
-            let mut candles: Vec<MateCandle> = from_value(data).unwrap();
+            let mut candles: Vec<MateCandle> = from_value(data).unwrap_or_default();
             match candles.len() {
                 0 => {
                     let ticker = symbol.to_string();

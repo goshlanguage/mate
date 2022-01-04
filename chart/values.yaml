@@ -4,23 +4,48 @@ image:
   repo: ghcr.io/goshlanguage/mate
   tag: latest
 
-# You must create a secret containing the env vars `TDA_CLIENT_ID`
-# and `TDA_REFRESH_TOKEN` to pass into mate to connect to tdameritrade
-#
-# This can be created via :
-# kubectl create secret generic tda-creds --from-literal=TDA_CLIENT_ID=$TDA_CLIENT_ID --from-literal=TDA_REFRESH_TOKEN=$TDA_REFRESH_TOKEN
-tdameritrade:
-  enabled: true
-  existingSecret: tda-creds
+accounts:
+  # You must create a secret containing the env vars `TDA_CLIENT_ID`
+  # and `TDA_REFRESH_TOKEN` to pass into mate to connect to tdameritrade
+  #
+  # This can be created via :
+  # kubectl create secret generic tda-creds --from-literal=TDA_CLIENT_ID=$TDA_CLIENT_ID --from-literal=TDA_REFRESH_TOKEN=$TDA_REFRESH_TOKEN
+  tdameritrade:
+    enabled: true
+    existingSecret: tda-creds
 
-# You must create a secret containing the env vars `KRAKEN_API_KEY`
-# and `KRAKEN_API_SECRET` to pass into mate to connect to kraken
-#
-# This can be created via :
-# kubectl create secret generic kraken-creds --from-literal=KRAKEN_API_KEY=$KRAKEN_API_KEY --from-literal=KRAKEN_API_SECRET=$KRAKEN_API_SECRET
-kraken:
+  # You must create a secret containing the env vars `KRAKEN_API_KEY`
+  # and `KRAKEN_API_SECRET` to pass into mate to connect to kraken
+  #
+  # This can be created via :
+  # kubectl create secret generic kraken-creds --from-literal=KRAKEN_API_KEY=$KRAKEN_API_KEY --from-literal=KRAKEN_API_SECRET=$KRAKEN_API_SECRET
+  kraken:
+    enabled: true
+    existingSecret: kraken-creds
+
+collector:
   enabled: true
-  existingSecret: kraken-creds
+  debug: true
+
+  stocks:
+  - MSFT
+  - AAPL
+  - EQIX
+  - QQQ
+  - TQQQ
+  - SQQQ
+
+  crypto:
+  - XETHZUSD
+  - XXBTZUSD
+  - ATOMUSD
+  - LTCUSD
+  - BTCUSD
+  - DOGEUSD
+  - ZECUSD
+
+  pollDuration: 60
+  filepath: /data
 
 s3:
   enabled: true
