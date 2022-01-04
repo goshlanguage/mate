@@ -75,7 +75,7 @@ impl Collector {
                 info!("Read state file from {}", filepath);
             };
 
-            let mut candles: Vec<MateCandle> = from_value(data).unwrap_or(Vec::new());
+            let mut candles: Vec<MateCandle> = from_value(data).unwrap_or_default();
             match candles.len() {
                 0 => {
                     let ticker = symbol.to_string();
