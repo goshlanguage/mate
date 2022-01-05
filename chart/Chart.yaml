@@ -3,3 +3,7 @@ appVersion: 0.1.0
 version: 0.1.0
 description: A helm chart for mate.
 name: mate
+dependencies:
+  - name: common
+    repository: https://charts.bitnami.com/bitnami
+    version: 1.x.x

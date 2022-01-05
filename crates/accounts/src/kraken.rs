@@ -94,7 +94,7 @@ impl KrakenAccount {
         close_price.clone()
     }
 
-    pub fn get_ticks(&self, pairs: Vec<String>) -> Result<Map<String, Value>, &'static str> {
+    pub fn get_ticks(&self, pairs: Vec<String>) -> Result<Map<String, Value>, String> {
         let mut data: Map<String, Value> = Map::new();
 
         let api_result = &self.client().ticker(pairs);
@@ -109,7 +109,7 @@ impl KrakenAccount {
 
                 Ok(data)
             }
-            Err(_e) => Err("Failed to collect pairs, review your pairs and ensure they match https://api.kraken.com/0/public/Assets"),
+            Err(_e) => Err(_e.to_string()),
         }
     }
 }

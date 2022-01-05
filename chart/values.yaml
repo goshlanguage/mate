@@ -27,6 +27,13 @@ collector:
   enabled: true
   debug: true
 
+  persistence:
+    enabled: true
+    existingClaim:
+    size: 100G
+
+  updateStrategy: RollingUpdate
+
   stocks:
   - MSFT
   - AAPL

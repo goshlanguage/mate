@@ -1,0 +1,100 @@
+---
+{{- if .Values.collector.enabled }}
+apiVersion: {{ include "common.capabilities.statefulset.apiVersion" . }}
+kind: StatefulSet
+metadata:
+  labels:
+    app: mate-collector
+  name: mate-collector
+spec:
+  replicas: 1
+  updateStrategy:
+    type: {{ .Values.collector.upgradeStrategy }}
+    {{- if (eq "Recreate" .Values.collector.updateStrategy) }}
+    rollingUpdate: null
+    {{- end }}
+  selector:
+    matchLabels:
+      app: mate-collector
+  serviceName: mate-collector
+  template:
+    metadata:
+      labels:
+        app: mate-collector
+    spec:
+      containers:
+      - name: mate-collector
+        command:
+        - mate-collector
+        args:
+        {{- if .Values.collector.debug }}
+        - -vv
+        {{- end }}
+        {{- if .Values.accounts.tdameritrade.enabled }}
+        - -a
+        - tdameritrade
+        {{- end }}
+        {{- if .Values.accounts.kraken.enabled }}
+        - -a
+        - kraken
+        {{- end }}
+        {{- if .Values.collector.pollDuration }}
+        - -p
+        - {{ .Values.collector.pollDuration | quote }}
+        {{- end }}
+        {{- if .Values.collector.filepath }}
+        - --filepath
+        - {{ .Values.collector.filepath }}
+        {{- end }}
+        {{- range .Values.collector.stocks }}
+        - -s
+        - {{ . }}
+        {{- end }}
+        {{- range .Values.collector.crypto }}
+        - -c
+        - {{ . }}
+        {{- end }}
+        image: "{{ .Values.image.repo }}:{{ .Values.image.tag }}"
+        {{- if eq .Values.env "staging" }}
+        imagePullPolicy: Always
+        {{- else }}
+        imagePullPolicy: IfNotPresent
+        {{- end }}
+        {{- if or .Values.accounts.tdameritrade.enabled .Values.accounts.kraken.enabled }}
+        envFrom:
+        {{- if .Values.accounts.tdameritrade.enabled }}
+        - secretRef:
+            name: {{ .Values.accounts.tdameritrade.existingSecret }}
+        {{- end }}
+        {{- if .Values.accounts.kraken.enabled }}
+        - secretRef:
+            name: {{ .Values.accounts.kraken.existingSecret }}
+        {{- end }}
+        {{- end }}
+        volumeMounts:
+        {{- if and .Values.collector.persistence.enabled (not .Values.collector.persistence.existingClaim) }}
+        - name: data
+          mountPath: /data
+        {{- else if and .Values.collector.persistence.enabled .Values.collector.persistance.existingClaim }}
+        - name: data
+          persistentVolumeClaim:
+        {{- with .Values.collector.persistence.existingClaim }}
+            claimName: {{ tpl . $ }}
+        {{- end }}
+        {{- else }}
+        - name: data
+          emptyDir: {}
+        {{- end }}
+      imagePullSecrets:
+      - name: regcred
+    {{- if and .Values.collector.persistence.enabled (not .Values.collector.persistence.existingClaim) }}
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: {{ .Values.collector.persistence.size }}
+  {{- end }}
+{{- end }}

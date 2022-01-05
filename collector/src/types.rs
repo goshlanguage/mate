@@ -10,9 +10,9 @@ use accounts::types::AccountType;
 
 /// TODO
 ///   Fix this broken module situation
-#[path = "./state/file.rs"]
+#[path = "./state/mod.rs"]
 mod state;
-use state::*;
+use state::file::*;
 
 pub struct Collector {
     pub conf: CollectorConfig,
