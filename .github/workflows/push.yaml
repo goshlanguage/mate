@@ -1,5 +1,11 @@
+name: test
+
 on:
-  push
+  push:
+    branches:
+      - trunk
+    tags:
+      - '!*'
 
 jobs:
   test:
