@@ -1,5 +1,7 @@
 # mate
 
+![build](https://github.com/goshlanguage/mate/actions/workflows/release.yaml/badge.svg)
+
 `mate` is an experimental mini algorithmic trading engine. I am writing this to learn more about algorithmic trading, and quantitative finance.
 
 Mate supports the following account types:
