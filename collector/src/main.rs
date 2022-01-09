@@ -16,9 +16,19 @@ use types::{Collector, CollectorConfig};
     version = "0.1.0",
     author
 )]
+
 struct Args {
     #[clap(short, long)]
     accounts: Vec<String>,
+
+    #[clap(long)]
+    s3_bucket: Option<String>,
+
+    #[clap(long, default_value = "https")]
+    s3_proto: String,
+
+    #[clap(long, default_value = "us-east-1")]
+    s3_region: String,
 
     #[clap(short, long)]
     crypto: Vec<String>,
@@ -39,10 +49,18 @@ struct Args {
 fn init(args: Args) -> Collector {
     init_logging(args.verbose);
 
+    let bucket = match args.s3_bucket {
+        Some(b) => b,
+        None => "".to_string(),
+    };
+
     let conf = CollectorConfig {
         accounts: args.accounts,
         crypto_watchlist: args.crypto,
         poll_seconds: args.poll_seconds,
+        s3_bucket: bucket,
+        s3_proto: args.s3_proto,
+        s3_region: args.s3_region,
         stock_watchlist: args.stock,
         filepath: args.filepath,
     };

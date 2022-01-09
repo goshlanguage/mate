@@ -56,3 +56,4 @@ collector:
 
 s3:
   enabled: true
+  bucketName: mate-data

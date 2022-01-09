@@ -32,6 +32,12 @@ spec:
         - secretRef:
             name: {{ .Values.accounts.kraken.existingSecret }}
         {{- end }}
+        {{- if .Values.s3.enabled }}
+        - configMapRef:
+            name: {{ .Values.s3.bucketName }}
+        - secretRef:
+            name: {{ .Values.s3.bucketName }}
+        {{- end }}
         {{- end }}
       imagePullSecrets:
       - name: regcred
