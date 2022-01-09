@@ -54,6 +54,12 @@ spec:
         - -c
         - {{ . }}
         {{- end }}
+        {{- if .Values.s3.enabled }}
+        - --s3-bucket
+        - {{ .Values.s3.bucketName }}
+        - --s3-proto
+        - {{ .Values.s3.proto }}
+        {{- end }}
         image: "{{ .Values.image.repo }}:{{ .Values.image.tag }}"
         {{- if eq .Values.env "staging" }}
         imagePullPolicy: Always
