@@ -2,8 +2,8 @@
 apiVersion: objectbucket.io/v1alpha1
 kind: ObjectBucketClaim
 metadata:
-  name: mate-ceph-bucket
+  name: {{ .Values.s3.bucketName }}
 spec:
-  generateBucketName: mate
+  bucketName: {{ .Values.s3.bucketName }}
   storageClassName: rook-ceph-bucket
 {{- end }}

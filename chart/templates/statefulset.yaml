@@ -70,6 +70,12 @@ spec:
         - secretRef:
             name: {{ .Values.accounts.kraken.existingSecret }}
         {{- end }}
+        {{- if .Values.s3.enabled }}
+        - configMapRef:
+            name: {{ .Values.s3.bucketName }}
+        - secretRef:
+            name: {{ .Values.s3.bucketName }}
+        {{- end }}
         {{- end }}
         volumeMounts:
         {{- if and .Values.collector.persistence.enabled (not .Values.collector.persistence.existingClaim) }}

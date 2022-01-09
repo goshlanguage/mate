@@ -13,9 +13,11 @@ use accounts::types::AccountType;
 #[path = "./state/mod.rs"]
 mod state;
 use state::file::*;
+use state::s3::S3;
 
 pub struct Collector {
     pub conf: CollectorConfig,
+    pub bucket: S3,
     pub accounts: Vec<AccountType>,
 }
 
@@ -24,6 +26,9 @@ pub struct CollectorConfig {
     pub crypto_watchlist: Vec<String>,
     pub filepath: String,
     pub poll_seconds: u64,
+    pub s3_bucket: String,
+    pub s3_proto: String,
+    pub s3_region: String,
     pub stock_watchlist: Vec<String>,
 }
 
@@ -31,10 +36,21 @@ impl Collector {
     /// new returns a collector configured with enabled accounts and settings from a given CollectorConfig
     /// it also ensures that the filesystem tree we need exists, and that each account is valid
     pub fn new(conf: CollectorConfig) -> Collector {
+        let bucket = S3::default();
+
         let mut collector = Collector {
             accounts: Vec::new(),
+            bucket,
             conf,
         };
+
+        if !&collector.conf.s3_bucket.is_empty() {
+            collector.bucket = S3::new(
+                collector.conf.s3_bucket.to_owned(),
+                collector.conf.s3_proto.to_owned(),
+                collector.conf.s3_region.to_owned(),
+            );
+        }
 
         ensure_filesystem_tree_exists(collector.conf.filepath.as_str());
 
@@ -103,7 +119,15 @@ impl Collector {
                 }
             }
 
-            write_file(filepath.as_str(), data);
+            write_file(filepath.as_str(), data.to_owned());
+
+            if !self.conf.s3_bucket.is_empty() {
+                info!("saving to bucket");
+
+                let path = format!("/equity-daily-{}-{}.json", symbol, get_year_month_day(),);
+
+                self.bucket.save(path, json!(data.to_owned()).to_string());
+            }
         }
     }
 
@@ -157,6 +181,14 @@ impl Collector {
             data.insert(get_epoch().to_string(), ticks.get(&pair).unwrap().clone());
 
             write_map_to_file(&filepath, &data);
+
+            if !self.conf.s3_bucket.is_empty() {
+                info!("saving to bucket");
+
+                let path = format!("/crypto-tick-{}-{}.json", pair, get_year_month_day(),);
+
+                self.bucket.save(path, json!(data.to_owned()).to_string());
+            }
         }
     }
 }
