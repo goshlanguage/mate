@@ -1,7 +1,7 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use super::schema::*;
 
-#[derive(Clone, Queryable, Serialize)]
+#[derive(Clone, Deserialize, Queryable, Serialize)]
 pub struct Account {
   pub id: i32,
   pub name: String,
@@ -18,6 +18,12 @@ pub struct Account {
 //     }
 //   }
 // }
+
+#[derive(Deserialize)]
+pub struct NewAccountPayload {
+  pub name: String,
+  pub balance: f64,
+}
 
 #[derive(Insertable)]
 #[table_name = "accounts"]

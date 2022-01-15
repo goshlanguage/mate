@@ -16,19 +16,8 @@ pub fn accounts_factory(app: &mut web::ServiceConfig) {
     &route.new(String::from("/{name}")),
     web::get().to(handlers::get)
   );
-}
-
-pub fn create_account(conn: &PgConnection, name: String, balance: f64) -> Account {
-  let new_account = NewAccount {
-    name: name.as_str(),
-    balance: &balance,
-    balance_history: &vec![balance]
-  };
-
-  // TODO
-  // catch and return error here perhaps
-  diesel::insert_into(accounts::table)
-    .values(&new_account)
-    .get_result(conn)
-    .expect("Error saving new account")
+  app.route(
+    &route.new(String::from("/")),
+    web::post().to(handlers::post)
+  );
 }
