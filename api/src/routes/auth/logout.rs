@@ -1,3 +1,3 @@
 pub async fn logout() -> String {
-  format!("Logged out")
+    format!("Logged out")
 }
