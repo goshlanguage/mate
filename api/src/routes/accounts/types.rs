@@ -4,24 +4,6 @@ use actix_web::{Error, HttpRequest, HttpResponse, Responder};
 use futures::future::{Ready, ready};
 use serde::Serialize;
 
-// #[derive(Queryable, Serialize)]
-// //#[table_name="accounts"]
-// pub struct Account {
-//     pub name: String,
-//     pub balance: f64,
-//     pub balance_history: Vec<f64>,
-// }
-
-// impl Account{
-//   fn new(name: String, balance: f64) -> Account {
-//     Account {
-//       name,
-//       balance,
-//       balance_history: vec![balance],
-//     }
-//   }
-// }
-
 impl Responder for Account {
   type Error = Error;
   type Future = Ready<Result<HttpResponse, Error>>;

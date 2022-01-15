@@ -99,5 +99,6 @@ The following references may be helpful for the underlying technologies used in 
 | clap     | [derive arg reference](https://github.com/clap-rs/clap/blob/v3.0.0-rc.11/examples/derive_ref/README.md#arg-attributes) |
 | diesel | [getting started](https://diesel.rs/guides/getting-started) |
 | | [type mappings](https://kotiri.com/2018/01/31/postgresql-diesel-rust-types.html) |
+| | [query DSL](http://docs.diesel.rs/diesel/query_dsl/trait.QueryDsl.html) |
 | krakenrs | [cargo docs](https://docs.rs/krakenrs/5.2.2/krakenrs/) |
 || [crates.io](https://crates.io/crates/krakenrs) |

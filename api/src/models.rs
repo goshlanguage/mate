@@ -1,4 +1,5 @@
 use serde::Serialize;
+use super::schema::*;
 
 #[derive(Clone, Queryable, Serialize)]
 pub struct Account {
@@ -8,13 +9,23 @@ pub struct Account {
   pub balance_history: Vec<f64>,
 }
 
-// #[derive(Insertable)]
-// #[table_name="accounts"]
-// pub struct NewAccount<'a> {
-//     pub name: &'a str,
-//     pub balance: &'a f64,
-//     pub balance_history: &'a Vec<f64>,
+// impl Account{
+//   fn new(name: String, balance: f64) -> Account {
+//     Account {
+//       name,
+//       balance,
+//       balance_history: vec![balance],
+//     }
+//   }
 // }
+
+#[derive(Insertable)]
+#[table_name = "accounts"]
+pub struct NewAccount<'a> {
+    pub name: &'a str,
+    pub balance: &'a f64,
+    pub balance_history: &'a Vec<f64>,
+}
 
 // impl<'a> NewAccount {
 //   pub fn new(name: String, balance: f64) -> NewAccount<'a> {

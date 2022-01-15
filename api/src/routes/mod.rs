@@ -1,5 +1,4 @@
 use actix_web::web;
-use crate::establish_connection;
 mod auth;
 mod accounts;
 mod equities;

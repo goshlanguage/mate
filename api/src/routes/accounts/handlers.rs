@@ -1,4 +1,4 @@
-use actix_web::{HttpRequest, Responder};
+use actix_web::{Error, HttpRequest, Responder};
 use crate::diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use crate::establish_connection;
 use crate::models::*;
@@ -10,19 +10,8 @@ pub async fn get_all() -> impl Responder {
 }
 
 pub async fn get(req: HttpRequest) -> impl Responder {
-  use crate::schema::accounts::dsl::*;
-
-  let connection = establish_connection();
   let account_name = req.match_info().get("name").unwrap().to_string();
-
-  let result = accounts
-      .filter(name.eq(account_name))
-      .first(&connection);
-
-  match result {
-    Ok(a) => Accounts{ accounts: vec![a]},
-    Err(_err) => Accounts{ accounts: Vec::new() },
-  }
+  get_account(account_name)
 }
 
 pub fn return_state() -> Accounts {
@@ -47,6 +36,21 @@ pub fn return_state() -> Accounts {
       array_buffer.push(account);
   }
   Accounts{ accounts: array_buffer }
+}
+
+pub fn get_account(account_name: String) -> Accounts {
+  use crate::schema::accounts::dsl::*;
+
+  let connection = establish_connection();
+
+  let result = accounts
+      .filter(name.eq(account_name))
+      .first(&connection);
+
+  match result {
+    Ok(a) => Accounts{ accounts: vec![a]},
+    Err(_err) => Accounts{ accounts: Vec::new() },
+  }
 }
 
 // pub async fn post(req: HttpRequest) {
