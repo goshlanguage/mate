@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-#[derive(Queryable, Serialize)]
+#[derive(Clone, Queryable, Serialize)]
 pub struct Account {
   pub id: i32,
   pub name: String,

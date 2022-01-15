@@ -7,12 +7,12 @@ mod types;
 
 pub fn accounts_factory(app: &mut web::ServiceConfig) {
   let route: Route = Route {prefix: String::from("/accounts")};
-  // app.route(
-  //   &route.new(String::from("/")),
-  //   web::get().to(handlers::get_all)
-  // );
   app.route(
-    &route.new(String::from("/{account}")),
+    &route.new(String::from("/")),
     web::get().to(handlers::get_all)
+  );
+  app.route(
+    &route.new(String::from("/{name}")),
+    web::get().to(handlers::get)
   );
 }

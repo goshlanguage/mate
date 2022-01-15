@@ -1,5 +1,5 @@
 use actix_web::{HttpRequest, Responder};
-use crate::diesel::{QueryDsl, RunQueryDsl};
+use crate::diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use crate::establish_connection;
 use crate::models::*;
 use super::types::Accounts;
@@ -9,9 +9,21 @@ pub async fn get_all() -> impl Responder {
   return_state()
 }
 
-// pub async fn get(req: HttpRequest) -> impl Responder {
-//   models::Account::filter(models::accounts::tables)
-// }
+pub async fn get(req: HttpRequest) -> impl Responder {
+  use crate::schema::accounts::dsl::*;
+
+  let connection = establish_connection();
+  let account_name = req.match_info().get("name").unwrap().to_string();
+
+  let result = accounts
+      .filter(name.eq(account_name))
+      .first(&connection);
+
+  match result {
+    Ok(a) => Accounts{ accounts: vec![a]},
+    Err(_err) => Accounts{ accounts: Vec::new() },
+  }
+}
 
 pub fn return_state() -> Accounts {
   use crate::schema::accounts::dsl::*;
