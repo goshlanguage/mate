@@ -48,6 +48,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "actix-cors"
+version = "0.5.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "36b133d8026a9f209a9aeeeacd028e7451bcca975f592881b305d37983f303d7"
+dependencies = [
+ "actix-web",
+ "derive_more",
+ "futures-util",
+ "log",
+ "once_cell",
+ "tinyvec",
+]
+
+[[package]]
 name = "actix-http"
 version = "2.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -300,10 +314,6 @@ dependencies = [
 [[package]]
 name = "api"
 version = "0.1.0"
-dependencies = [
- "diesel",
- "serde",
-]
 
 [[package]]
 name = "arrayvec"
@@ -1516,6 +1526,7 @@ name = "mate"
 version = "0.1.0"
 dependencies = [
  "accounts",
+ "actix-cors",
  "actix-rt",
  "actix-web",
  "async-std",

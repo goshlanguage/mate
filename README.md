@@ -2,7 +2,9 @@
 
 ![build](https://github.com/goshlanguage/mate/actions/workflows/release.yaml/badge.svg)
 
-`mate` is an experimental mini algorithmic trading engine. I am writing this to learn more about algorithmic trading, and quantitative finance.
+`mate` is an **experimental** mini algorithmic trading engine. **Use at your own risk**.
+
+I am writing this to learn more about algorithmic trading, and quantitative finance.
 
 Mate supports the following account types:
 
@@ -39,6 +41,7 @@ To register an account and get API access, you can either see [upstream document
 - This should redirect you to a log in for your TD ameritrade account (brokerage account), to perform the oauth grant to give your app access to your account
 - if you used localhost, it will redirect and be broken, but the code to fetch your access and refresh token will be in the redirected url query params (eg: `https://localhost/?code=Your%2Code%2Here`)
 - take that code, and go to [https://developer.tdameritrade.com/authentication/apis/post/token-0](https://developer.tdameritrade.com/authentication/apis/post/token-0)
+
   - enter `authorization_code` for `grant_type`
   - enter `offline` for `access_type`
   - urldecode the code you copied from the redirect earlier
@@ -66,12 +69,12 @@ _Equities_:
 ```json
 [
   {
-    'close': 39.435,
-    'datetime': 1546236000000,
-    'high': 39.84,
-    'low': 39.12,
-    'open': 39.6325,
-    'volume': 140013864
+    "close": 39.435,
+    "datetime": 1546236000000,
+    "high": 39.84,
+    "low": 39.12,
+    "open": 39.6325,
+    "volume": 140013864
   }
 ]
 ```
@@ -81,24 +84,29 @@ This is derived from the response of the [`pricehistory` endpoint](https://devel
 _Crypto_:
 
 ```json
-{'1641237335': {'a': ['0.169609000', '221449', '221449.000'],
-                'b': ['0.169608900', '268', '268.000'],
-                'c': ['0.169608900', '67.14677906']}
+{
+  "1641237335": {
+    "a": ["0.169609000", "221449", "221449.000"],
+    "b": ["0.169608900", "268", "268.000"],
+    "c": ["0.169608900", "67.14677906"]
+  }
 }
 ```
 
 JSON contains a list of epoch timestamps as strings, containing an object representing the ask, bid, and close of each tick.
 This model is derived from the [`ticker` endpoint](https://docs.kraken.com/rest/#operation/getTickerInformation) response that comes from the Kraken API
 
-### References
+## References
 
 The following references may be helpful for the underlying technologies used in this project:
 
-| Name     | Link                                                                                                                   |
-| -------- | ---------------------------------------------------------------------------------------------------------------------- |
-| clap     | [derive arg reference](https://github.com/clap-rs/clap/blob/v3.0.0-rc.11/examples/derive_ref/README.md#arg-attributes) |
-| diesel | [getting started](https://diesel.rs/guides/getting-started) |
-| | [type mappings](https://kotiri.com/2018/01/31/postgresql-diesel-rust-types.html) |
-| | [query DSL](http://docs.diesel.rs/diesel/query_dsl/trait.QueryDsl.html) |
-| krakenrs | [cargo docs](https://docs.rs/krakenrs/5.2.2/krakenrs/) |
-|| [crates.io](https://crates.io/crates/krakenrs) |
+| Name       | Description                                                                      | Link                                                                                                                   |
+| ---------- | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| actix-web  | web frameworks                                                                   | [docs](https://actix.rs/docs/getting-started/)                                                                         |
+| actix-cors | cors middleware                                                                  | [crates.io](https://crates.io/crates/actix-cors)                                                                       |
+| clap       | cli framework                                                                    | [derive arg reference](https://github.com/clap-rs/clap/blob/v3.0.0-rc.11/examples/derive_ref/README.md#arg-attributes) |
+| diesel     | orm                                                                              | [getting started](https://diesel.rs/guides/getting-started)                                                            |
+|            | | [type mappings](https://kotiri.com/2018/01/31/postgresql-diesel-rust-types.html) |
+|            | | [query DSL](http://docs.diesel.rs/diesel/query_dsl/trait.QueryDsl.html)          |
+| krakenrs   | client api                                                                       | [cargo docs](https://docs.rs/krakenrs/5.2.2/krakenrs/)                                                                 |
+|            | | [crates.io](https://crates.io/crates/krakenrs)                                   |

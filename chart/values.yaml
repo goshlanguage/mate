@@ -1,4 +1,4 @@
-env: staging
+env: prod
 
 image:
   repo: ghcr.io/goshlanguage/mate
@@ -22,6 +22,10 @@ accounts:
   kraken:
     enabled: true
     existingSecret: kraken-creds
+
+api:
+  enabled: true
+  debug: true
 
 collector:
   enabled: true

@@ -19,8 +19,12 @@ pub async fn get(req: HttpRequest) -> impl Responder {
 
 // curl -i -X POST -d '{"name":"tdameritrade", "balance": 475.78}' -H 'Content-Type: application/json' http://localhost:8000/accounts/
 pub async fn post(payload: web::Json<NewAccountPayload>) -> impl Responder {
-  info!("Received post for {}", payload.name);
   create_account(&payload)
+}
+
+pub async fn delete(req: HttpRequest) -> impl Responder {
+  let id: i32 = req.match_info().get("id").unwrap().to_string().parse().unwrap();
+  delete_account(id)
 }
 
 pub fn get_state() -> Accounts {
@@ -60,11 +64,26 @@ pub fn create_account(new: &NewAccountPayload) -> Account {
   // TODO
   // catch and return error here perhaps
   let result = diesel::insert_into(accounts::table)
-    .values(new_account)
-    .get_result::<Account>(&connection)
-    .expect("Error saving new account");
+  .values(new_account)
+  .get_result::<Account>(&connection)
+  .expect("Error saving new account");
 
   return result
+}
+
+pub fn delete_account(rm_id: i32) -> Accounts {
+  use crate::schema::accounts::dsl::*;
+
+  let connection = establish_connection();
+
+  // TODO
+  // catch and return error here perhaps
+  diesel::delete(
+    accounts.filter(id.eq(rm_id)))
+    .execute(&connection)
+    .expect(format!("Error delete account {}", rm_id).as_str());
+
+  return get_state()
 }
 
 pub fn get_account(account_name: String) -> Accounts {
@@ -81,33 +100,3 @@ pub fn get_account(account_name: String) -> Accounts {
     Err(_err) => Accounts{ accounts: Vec::new() },
   }
 }
-
-// pub async fn post(req: HttpRequest) {
-//   let name: String = req.match_info()
-//                       .get("name")
-//                       .unwrap()
-//                       .to_string();
-
-//     let balance: f64 = req.match_info()
-//         .get("balance")
-//         .unwrap()
-//         .to_string()
-//         .parse();
-
-//     let balance_history = vec![balance];
-
-//     let connection = establish_connection();
-//     let accounts = accounts::table
-//         .filter(accounts::columns::name.eq(name.as_str()))
-//         .order(accounts::columns::id.asc())
-//         .load::<models::Account>(&connection)
-//         .unwrap();
-
-//     if accounts.len() == 0 {
-//         let new_account = NewAccount::new(name, balance);
-//         let _ = diesel::insert_into(accounts::table).values(&new_account)
-//             .execute(&connection);
-//     }
-
-//     return get_state()
-// }

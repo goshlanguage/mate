@@ -17,6 +17,7 @@ path = "api/src/main.rs"
 
 [dependencies]
 accounts = {path = "./crates/accounts", version = "0.1.0"}
+actix-cors = "0.5.4"
 actix-rt = "1"
 actix-web = "3.3"
 async-std = "1.6.3"
