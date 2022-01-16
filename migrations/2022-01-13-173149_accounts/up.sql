@@ -3,8 +3,17 @@
 CREATE TABLE accounts (
   id SERIAL PRIMARY KEY,
   name VARCHAR NOT NULL,
-  balance FLOAT NOT NULL,
-  balance_history FLOAT[] NOT NULL
+  vendor VARCHAR NOT NULL,
+  client_key VARCHAR NOT NULL,
+  client_secret VARCHAR NOT NULL,
+  created TIMESTAMP NOT NULL,
+  updated TIMESTAMP
 );
 
-INSERT INTO accounts (name, balance, balance_history) VALUES('test', 0.0, '{0.0}');
+CREATE TABLE account_histories (
+  id SERIAL PRIMARY KEY,
+  account_id  INTEGER NOT NULL,
+  balance FLOAT NOT NULL,
+  updated TIMESTAMP NOT NULL,
+  FOREIGN KEY (account_id) REFERENCES accounts (id) ON DELETE CASCADE
+);
