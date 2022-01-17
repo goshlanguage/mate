@@ -1,11 +1,18 @@
-name: test
+name: rust test and lint
 
 on:
   push:
     branches-ignore:
-      - trunk
+      - main
     tags:
       - '!*'
+    paths:
+    - 'src/**'
+    - 'crates/**'
+    - 'Cargo**'
+    - '**.toml'
+    - 'api/**'
+    - 'collector/**'
 
 jobs:
   test:

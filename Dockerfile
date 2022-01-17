@@ -1,6 +1,6 @@
 FROM rust:1.57-slim-bullseye AS builder
 RUN apt update && \
-  apt install -y libssl-dev pkg-config
+  apt install -y libssl-dev pkg-config libpq-dev
 WORKDIR /usr/src/mate
 COPY . .
 RUN cargo install --path .

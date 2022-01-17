@@ -62,6 +62,10 @@ postgresql:
   enabled: true
   postgresqlDatabase: mate
 
+  image:
+    repository: arm64v8/postgres
+    tag: bullseye
+
 s3:
   enabled: true
   bucketName: mate-data
