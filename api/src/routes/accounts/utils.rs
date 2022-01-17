@@ -166,13 +166,12 @@ pub fn delete_account(rm_id: i32) -> Accounts {
     //   .execute(&connection)
     //   .expect(format!("Error delete account histories for {}", rm_id).as_str());
 
-    match diesel::delete(accounts.filter(id.eq(rm_id)))
-           .execute(&connection) {
-      Ok(_) => (),
-      Err(_err) => {
-        // TODO return the error to the client
-        error!("Error delete account {}", rm_id);
-      }
+    match diesel::delete(accounts.filter(id.eq(rm_id))).execute(&connection) {
+        Ok(_) => (),
+        Err(_err) => {
+            // TODO return the error to the client
+            error!("Error delete account {}", rm_id);
+        }
     }
 
     get_accounts()
