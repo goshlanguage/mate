@@ -22,6 +22,9 @@ spec:
         {{- else }}
         imagePullPolicy: IfNotPresent
         {{- end }}
+        env:
+        - name: ENV
+          value: {{ .Values.env }}
         {{- if or .Values.accounts.tdameritrade.enabled .Values.accounts.kraken.enabled }}
         envFrom:
         {{- if .Values.accounts.tdameritrade.enabled }}
@@ -41,9 +44,6 @@ spec:
         {{- end }}
       imagePullSecrets:
       - name: regcred
-      env:
-        - name: ENV
-          value: {{ .Values.env }}
 {{ if .Values.api.enabled }}
 ---
 apiVersion: apps/v1
@@ -68,24 +68,13 @@ spec:
         {{- if eq .Values.env "staging" }}
         args:
         - -vv
+        env:
+        - name: ENV
+          value: {{ .Values.env }}
         imagePullPolicy: Always
         {{- else }}
         imagePullPolicy: IfNotPresent
         {{- end }}
-        {{- if or .Values.accounts.tdameritrade.enabled .Values.accounts.kraken.enabled }}
-        envFrom:
-        {{- if .Values.accounts.tdameritrade.enabled }}
-        - secretRef:
-            name: {{ .Values.accounts.tdameritrade.existingSecret }}
-        {{- end }}
-        {{- if .Values.accounts.kraken.enabled }}
-        - secretRef:
-            name: {{ .Values.accounts.kraken.existingSecret }}
-        {{- end }}
-        {{- end }}
       imagePullSecrets:
       - name: regcred
-      env:
-        - name: ENV
-          value: {{ .Values.env }}
 {{- end }}
