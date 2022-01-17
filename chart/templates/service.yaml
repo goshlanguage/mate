@@ -11,3 +11,19 @@ spec:
   clusterIP: None
   selector:
     app: mate-collector
+{{- if .Values.api.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mate-collector
+  labels:
+    app: mate-collector
+spec:
+  ports:
+  - port: 80
+    name: web
+  clusterIP: None
+  selector:
+    app: mate-api
+{{- end }}

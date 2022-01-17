@@ -41,3 +41,51 @@ spec:
         {{- end }}
       imagePullSecrets:
       - name: regcred
+      env:
+        - name: ENV
+          value: {{ .Values.env }}
+{{ if .Values.api.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: mate-api
+  name: mate-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mate-api
+  template:
+    metadata:
+      labels:
+        app: mate-api
+    spec:
+      containers:
+      - name: mate-api
+        image: "{{ .Values.image.repo }}:{{ .Values.image.tag }}"
+        {{- if eq .Values.env "staging" }}
+        args:
+        - -vv
+        imagePullPolicy: Always
+        {{- else }}
+        imagePullPolicy: IfNotPresent
+        {{- end }}
+        {{- if or .Values.accounts.tdameritrade.enabled .Values.accounts.kraken.enabled }}
+        envFrom:
+        {{- if .Values.accounts.tdameritrade.enabled }}
+        - secretRef:
+            name: {{ .Values.accounts.tdameritrade.existingSecret }}
+        {{- end }}
+        {{- if .Values.accounts.kraken.enabled }}
+        - secretRef:
+            name: {{ .Values.accounts.kraken.existingSecret }}
+        {{- end }}
+        {{- end }}
+      imagePullSecrets:
+      - name: regcred
+      env:
+        - name: ENV
+          value: {{ .Values.env }}
+{{- end }}

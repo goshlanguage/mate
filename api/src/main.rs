@@ -1,33 +1,24 @@
-use bytes::Bytes;
+#[macro_use]
+extern crate diesel;
+
+pub mod models;
+mod routes;
+pub mod schema;
+
+use actix_cors::Cors;
+use actix_web::{http::header, App, HttpServer};
 use clap::Parser;
-use hyper::{
-    body::to_bytes,
-    service::{make_service_fn, service_fn},
-    Body, Request, Server,
-};
-use log::info;
-use route_recognizer::Params;
-use router::Router;
-use std::sync::Arc;
-
-mod handlers;
-mod router;
+use diesel::pg::PgConnection;
+use diesel::prelude::*;
 use matelog::init_logging;
-
-type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
-type Response = hyper::Response<hyper::Body>;
-
-#[derive(Clone, Debug)]
-pub struct AppState {
-    pub brokers: Vec<String>,
-}
+use std::env;
 
 /// You can see the spec for clap's arg attributes here:
 ///      <https://github.com/clap-rs/clap/blob/v3.0.0-rc.11/examples/derive_ref/README.md#arg-attributes>
 #[derive(Parser, Debug)]
-#[clap(about, version, author)]
+#[clap(name = "mate-api", about = "api for mate", version = "0.1.0", author)]
 struct Args {
-    #[clap(short, long, default_value_t = 8080)]
+    #[clap(short, long, default_value_t = 8000)]
     port: i32,
 
     #[clap(long, default_value = "postgres")]
@@ -36,7 +27,7 @@ struct Args {
     #[clap(long, default_value = "127.0.0.1")]
     postgres_hostname: String,
 
-    #[clap(long, env = "POSTGRES_PASSWORD")]
+    #[clap(long, env = "POSTGRES_PASSWORD", default_value = "")]
     postgres_password: String,
 
     #[clap(long, default_value_t = 5432)]
@@ -49,92 +40,60 @@ struct Args {
     verbose: usize,
 }
 
-#[tokio::main]
-async fn main() -> Result<(), Error> {
+#[actix_rt::main]
+async fn main() -> std::io::Result<()> {
     let args = Args::parse();
     init_logging(args.verbose);
 
-    let psql_conn_string = format!(
-        "postgresql://{}:{}@{}:{}/{}",
-        args.postgres_user,
-        args.postgres_password,
-        args.postgres_hostname,
-        args.postgres_port,
-        args.postgres_database
-    );
-    info!("psql connstring: {}", psql_conn_string.clone());
+    let port = args.port;
 
-    let mut router: router::Router = Router::new();
-    router.get("/brokers/", Box::new(handlers::brokers_get));
-    router.get("/brokers/:broker", Box::new(handlers::brokers_get_one));
-    router.post("/brokers/", Box::new(handlers::brokers_update));
-    // router.delete("/brokers/", Box::new(handlers::brokers_delete));
-
-    let shared_router = Arc::new(router);
-    let shared_state: Arc<AppState> = Arc::new(AppState {
-        brokers: Vec::new(),
-    });
-
-    let new_service = make_service_fn(move |_| {
-        let router_capture = shared_router.clone();
-        let state_capture = shared_state.clone();
-
-        async {
-            Ok::<_, Error>(service_fn(move |req| {
-                route(router_capture.clone(), req, state_capture.clone())
-            }))
-        }
-    });
-
-    let addr = format!("0.0.0.0:{}", args.port)
-        .parse()
-        .expect("address creation works");
-    let server = Server::bind(&addr).serve(new_service);
-    info!("Listening on http://{}", addr);
-    let _ = server.await;
-
-    Ok(())
-}
-
-async fn route(
-    router: Arc<Router>,
-    req: Request<hyper::Body>,
-    app_state: Arc<AppState>,
-) -> Result<Response, Error> {
-    let found_handler = router.route(req.uri().path(), req.method());
-
-    let ctx = Context::new(app_state, req, found_handler.params);
-    let resp = found_handler.handler.invoke(ctx).await;
-    Ok(resp)
-}
-
-#[derive(Debug)]
-pub struct Context {
-    pub state: Arc<AppState>,
-    pub req: Request<Body>,
-    pub params: Params,
-    body_bytes: Option<Bytes>,
-}
-
-impl Context {
-    pub fn new(state: Arc<AppState>, req: Request<Body>, params: Params) -> Context {
-        Context {
-            state,
-            req,
-            params,
-            body_bytes: None,
+    // ensure a DATABASE_URL is set in environment
+    match env::var("DATABASE_URL") {
+        Ok(_) => (),
+        Err(_) => {
+            let psql_conn_string = format!(
+                "postgresql://{}:{}@{}:{}/{}",
+                args.postgres_user,
+                args.postgres_password,
+                args.postgres_hostname,
+                args.postgres_port,
+                args.postgres_database
+            );
+            env::set_var("DATABASE_URL", psql_conn_string);
         }
     }
 
-    pub async fn body_json<T: serde::de::DeserializeOwned>(&mut self) -> Result<T, Error> {
-        let body_bytes = match self.body_bytes {
-            Some(ref v) => v,
-            _ => {
-                let body = to_bytes(self.req.body_mut()).await?;
-                self.body_bytes = Some(body);
-                self.body_bytes.as_ref().expect("body_bytes was set above")
-            }
-        };
-        Ok(serde_json::from_slice(body_bytes)?)
+    HttpServer::new(move || {
+        let cors = get_cors_policy();
+
+        App::new().wrap(cors).configure(routes::api_factory)
+    })
+    .bind(format!("127.0.0.1:{}", port).as_str())?
+    .workers(3)
+    .run()
+    .await
+}
+
+pub fn establish_connection() -> PgConnection {
+    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    PgConnection::establish(&database_url).expect("Error connecting to database")
+}
+
+/// get_cors_policy sets more permissive CORS policy if the environment is staging.
+pub fn get_cors_policy() -> Cors {
+    let env = match env::var("ENV") {
+        Ok(v) => v,
+        Err(_) => "staging".to_string(),
+    };
+
+    if env != *"prod" {
+        Cors::permissive()
+    } else {
+        Cors::default()
+            .allowed_origin("http://mate.default.svc.cluster.local")
+            .allowed_methods(vec!["GET", "POST"])
+            .allowed_headers(vec![header::AUTHORIZATION, header::ACCEPT])
+            .allowed_header(header::CONTENT_TYPE)
+            .max_age(3600)
     }
 }
