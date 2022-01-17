@@ -64,3 +64,6 @@ postgresql:
 
 s3:
   enabled: true
+  bucketName: mate-data
+  # depending on your deployment of rook, you may wish to set the proto to http or https
+  proto: http
