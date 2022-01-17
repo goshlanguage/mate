@@ -21,7 +21,4 @@ table! {
 
 joinable!(account_histories -> accounts (account_id));
 
-allow_tables_to_appear_in_same_query!(
-    account_histories,
-    accounts,
-);
+allow_tables_to_appear_in_same_query!(account_histories, accounts,);

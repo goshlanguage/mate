@@ -3,7 +3,8 @@ pub struct Route {
 }
 
 impl Route {
+    #[warn(clippy::new_ret_no_self)]
     pub fn new(&self, route: String) -> String {
-        return self.prefix.to_owned() + &route;
+        self.prefix.to_owned() + &route
     }
 }

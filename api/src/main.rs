@@ -2,11 +2,11 @@
 extern crate diesel;
 
 pub mod models;
-pub mod schema;
 mod routes;
+pub mod schema;
 
-use actix_web::{App, HttpServer, http::header};
 use actix_cors::Cors;
+use actix_web::{http::header, App, HttpServer};
 use clap::Parser;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
@@ -59,28 +59,24 @@ async fn main() -> std::io::Result<()> {
                 args.postgres_port,
                 args.postgres_database
             );
-            env::set_var("DATABASE_URL", psql_conn_string.clone());
-        },
+            env::set_var("DATABASE_URL", psql_conn_string);
+        }
     }
 
     HttpServer::new(move || {
         let cors = get_cors_policy();
 
-        App::new()
-            .wrap(cors)
-            .configure(routes::api_factory)
+        App::new().wrap(cors).configure(routes::api_factory)
     })
-        .bind(format!("127.0.0.1:{}", port).as_str())?
-        .workers(3)
-        .run()
-        .await
+    .bind(format!("127.0.0.1:{}", port).as_str())?
+    .workers(3)
+    .run()
+    .await
 }
 
 pub fn establish_connection() -> PgConnection {
-    let database_url = env::var("DATABASE_URL")
-        .expect("DATABASE_URL must be set");
-    PgConnection::establish(&database_url)
-        .expect(format!("Error connecting to database").as_str())
+    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    PgConnection::establish(&database_url).expect("Error connecting to database")
 }
 
 /// get_cors_policy sets more permissive CORS policy if the environment is staging.
@@ -90,7 +86,7 @@ pub fn get_cors_policy() -> Cors {
         Err(_) => "staging".to_string(),
     };
 
-    if env != "prod".to_string() {
+    if env != *"prod" {
         Cors::permissive()
     } else {
         Cors::default()
