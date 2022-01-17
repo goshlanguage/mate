@@ -1,10 +1,10 @@
-pub struct Route {
+pub struct Router {
     pub prefix: String,
 }
 
-impl Route {
-    #[warn(clippy::new_ret_no_self)]
-    pub fn new(&self, route: String) -> String {
-        self.prefix.to_owned() + &route
+impl Router {
+    pub fn new_route(&self, route: String) -> String {
+        let prefix = self.prefix.to_owned();
+        prefix + &route
     }
 }
