@@ -17,8 +17,25 @@ use std::env;
 ///      <https://github.com/clap-rs/clap/blob/v3.0.0-rc.11/examples/derive_ref/README.md#arg-attributes>
 #[derive(Parser, Debug)]
 #[clap(name = "mate-api", about = "api for mate", version = "0.1.0", author)]
-
 struct Args {
+    #[clap(short, long, default_value_t = 8000)]
+    port: i32,
+
+    #[clap(long, default_value = "postgres")]
+    postgres_database: String,
+
+    #[clap(long, default_value = "127.0.0.1")]
+    postgres_hostname: String,
+
+    #[clap(long, env = "POSTGRES_PASSWORD", default_value = "")]
+    postgres_password: String,
+
+    #[clap(long, default_value_t = 5432)]
+    postgres_port: i32,
+
+    #[clap(long, default_value = "postgres")]
+    postgres_user: String,
+
     #[clap(short, long, parse(from_occurrences))]
     verbose: usize,
 }
@@ -28,6 +45,23 @@ async fn main() -> std::io::Result<()> {
     let args = Args::parse();
     init_logging(args.verbose);
 
+    let port = args.port;
+
+    // ensure a DATABASE_URL is set in environment
+    match env::var("DATABASE_URL") {
+        Ok(_) => (),
+        Err(_) => {
+            let psql_conn_string = format!(
+                "postgresql://{}:{}@{}:{}/{}",
+                args.postgres_user,
+                args.postgres_password,
+                args.postgres_hostname,
+                args.postgres_port,
+                args.postgres_database
+            );
+            env::set_var("DATABASE_URL", psql_conn_string.clone());
+        },
+    }
 
     HttpServer::new(move || {
         let cors = get_cors_policy();
@@ -36,7 +70,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(cors)
             .configure(routes::api_factory)
     })
-        .bind("127.0.0.1:8000")?
+        .bind(format!("127.0.0.1:{}", port).as_str())?
         .workers(3)
         .run()
         .await
