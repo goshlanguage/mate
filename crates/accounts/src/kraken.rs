@@ -1,6 +1,9 @@
 use super::traits::get::Get;
 use super::types::*;
 use krakenrs::{KrakenCredentials, KrakenRestAPI, KrakenRestConfig};
+use log::info;
+use rust_decimal::prelude::*;
+use rust_decimal_macros::dec;
 use serde_json::{json, Map, Value};
 use std::{convert::TryFrom, time::Duration};
 
@@ -13,6 +16,7 @@ use std::{convert::TryFrom, time::Duration};
 pub struct KrakenAccount {
     pub account_id: String,
     pub account: Account,
+    pub database_id: Option<i32>,
     pub client_key: String,
     pub client_secret: String,
     pub active: bool,
@@ -24,6 +28,7 @@ impl KrakenAccount {
         account_id: &str,
         client_key: &str,
         client_secret: &str,
+        database_id: Option<i32>,
     ) -> KrakenAccount {
         let creds = KrakenCredentials {
             key: client_key.to_string(),
@@ -37,12 +42,19 @@ impl KrakenAccount {
 
         KrakenRestAPI::try_from(conf).expect("could not connect to Kraken");
 
+        let mut db_id = None;
+        if let Some(..) = database_id {
+            let id = database_id.unwrap();
+            db_id = Some(id);
+        }
+
         KrakenAccount {
             account_id: account_id.to_string(),
             active: true,
             account: Account::new(name),
             client_key: client_key.to_string(),
             client_secret: client_secret.to_string(),
+            database_id: db_id,
         }
     }
 
@@ -60,18 +72,36 @@ impl KrakenAccount {
         KrakenRestAPI::try_from(conf).expect("could not connect to Kraken")
     }
 
-    #[allow(dead_code)]
-    pub fn get_account_balances(&self) -> String {
-        let mut balance = String::new();
-        let accounts = self.client().get_account_balance().unwrap();
+    pub fn get_account_balance(&self) -> Decimal {
+        let mut balance = dec!(0.0);
+        let balances = self.client().get_account_balance().unwrap();
 
-        for account in accounts.keys() {
-            balance = format!(
-                "{}{}:{:?}\n",
-                balance,
-                account,
-                accounts.get(account).unwrap()
-            );
+        info!("Found account balances for: {:?}", balances.keys());
+        for key in balances.keys() {
+            // Staked accounts end in .S
+            // These accounts are not valid to Kraken, so we need to split
+            // the string to get the asset type
+            let asset_pair = if key.contains('.') {
+                let split = &key.split('.').collect::<Vec<&str>>();
+                split[0].to_string().to_owned()
+            } else {
+                key.to_string()
+            };
+
+            let asset_pair = match asset_pair.as_str() {
+                "ZUSD" => {
+                    balance += balances.get(key).unwrap();
+                    continue;
+                }
+                "ATOM" => "ATOMUSD".to_string(),
+                "XXDG" => "XDGUSD".to_string(),
+                _ => format!("{}ZUSD", asset_pair),
+            };
+
+            let spot_price = &self.get_spot_price(asset_pair.clone());
+            info!("Spot price for {}: {:?}", asset_pair, spot_price);
+
+            balance += spot_price * balances.get(key).unwrap();
         }
         balance
     }
@@ -111,6 +141,20 @@ impl KrakenAccount {
             }
             Err(_e) => Err(_e.to_string()),
         }
+    }
+
+    pub fn get_spot_price(&self, asset_pair: String) -> Decimal {
+        // Fetch TickerResponse
+        // <https://github.com/garbageslam/krakenrs/blob/v5.2.2/src/messages.rs#L142>
+        let ticker_data = self.client().ticker(vec![asset_pair.to_string()]).unwrap();
+
+        // Get our asset's value from the returned hashmap
+        let asset_price = ticker_data.get(&asset_pair).unwrap();
+        let close_price = asset_price.c.first().unwrap();
+
+        // See the AssetTickerInfo model here:
+        // <https://github.com/garbageslam/krakenrs/blob/v5.2.2/src/messages.rs#L130-L139>
+        Decimal::from_str(close_price).unwrap()
     }
 }
 

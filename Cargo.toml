@@ -28,7 +28,12 @@ chrono = { version = "0.4", features = [ "serde" ] }
 diesel = { version = "1.4.4", features = [ "chrono", "postgres" ] }
 futures = "0.3.5"
 log = "~0.4.14"
+magic-crypt = "3.1"
 matelog = {path = "./crates/matelog", version = "0.1.0"}
+num-traits = "0.2"
+reqwest = "~0.11.9"
+rust_decimal = "1.20"
+rust_decimal_macros = "1.20"
 rust-s3 = { version = "0.28.0", features = ["blocking"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }

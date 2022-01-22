@@ -65,12 +65,21 @@ spec:
       containers:
       - name: mate-api
         image: "{{ .Values.image.repo }}:{{ .Values.image.tag }}"
-        {{- if eq .Values.env "staging" }}
+        command:
+        - mate-api
         args:
         - -vv
+        - --postgres-hostname
+        - mate-postgresql
         env:
         - name: ENV
           value: {{ .Values.env }}
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mate-postgresql
+              key: postgresql-password
+        {{- if eq .Values.env "staging" }}
         imagePullPolicy: Always
         {{- else }}
         imagePullPolicy: IfNotPresent

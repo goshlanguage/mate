@@ -2,6 +2,9 @@ use clap::Parser;
 use log::info;
 use std::{thread, time::Duration};
 
+#[macro_use]
+extern crate magic_crypt;
+
 use matelog::init_logging;
 
 mod types;
@@ -22,6 +25,9 @@ struct Args {
     accounts: Vec<String>,
 
     #[clap(long)]
+    api_host: Option<String>,
+
+    #[clap(long)]
     s3_bucket: Option<String>,
 
     #[clap(long, default_value = "https")]
@@ -34,7 +40,7 @@ struct Args {
     crypto: Vec<String>,
 
     #[clap(long)]
-    filepath: String,
+    filepath: Option<String>,
 
     #[clap(short, long, default_value_t = 3600)]
     poll_seconds: u64,
@@ -56,6 +62,7 @@ fn init(args: Args) -> Collector {
 
     let conf = CollectorConfig {
         accounts: args.accounts,
+        api_host: args.api_host,
         crypto_watchlist: args.crypto,
         poll_seconds: args.poll_seconds,
         s3_bucket: bucket,

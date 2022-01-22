@@ -1,5 +1,7 @@
 #[macro_use]
 extern crate diesel;
+#[macro_use]
+extern crate magic_crypt;
 
 pub mod models;
 mod routes;

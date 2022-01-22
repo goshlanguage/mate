@@ -17,6 +17,7 @@ pub struct TDAmeritradeAccount {
     pub account_id: String,
     pub account: Account,
     pub client_id: String,
+    pub database_id: Option<i32>,
     pub refresh_token: String,
     pub active: bool,
 }
@@ -27,11 +28,18 @@ impl TDAmeritradeAccount {
         account_id: &str,
         client_id: &str,
         refresh_token: &str,
+        database_id: Option<i32>,
     ) -> TDAmeritradeAccount {
         let mut client = Client::new(client_id, refresh_token, None);
 
         let response = client.get_access_token().unwrap();
         client.set_access_token(&Some(response.into()));
+
+        let mut db_id = None;
+        if let Some(..) = database_id {
+            let id = database_id.unwrap();
+            db_id = Some(id);
+        }
 
         TDAmeritradeAccount {
             account_id: account_id.to_string(),
@@ -39,6 +47,7 @@ impl TDAmeritradeAccount {
             account: Account::new(name),
             client_id: client_id.to_string(),
             refresh_token: refresh_token.to_string(),
+            database_id: db_id,
         }
     }
 
@@ -47,6 +56,13 @@ impl TDAmeritradeAccount {
         let response = client.get_access_token().unwrap();
         client.set_access_token(&Some(response.into()));
         client
+    }
+
+    #[allow(dead_code)]
+    pub fn get_accounts(&self) -> Vec<tda_sdk::responses::Account> {
+        self.client()
+            .get_accounts(GetAccountsParams::default())
+            .unwrap()
     }
 
     #[allow(dead_code)]
