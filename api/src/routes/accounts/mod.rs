@@ -37,10 +37,15 @@ pub fn accounts_factory(app: &mut web::ServiceConfig) {
         &router.new_route(String::from("/summary/")),
         web::get().to(handlers::get_summary_all),
     );
-    // U Balance 1
+    // U Account 1
+    app.route(
+        &router.new_route(String::from("/")),
+        web::put().to(handlers::put_account),
+    );
+    // U Balance All
     app.route(
         &router.new_route(String::from("/balance/")),
-        web::put().to(handlers::update_balance),
+        web::put().to(handlers::update_balances),
     );
     // D Account 1
     app.route(

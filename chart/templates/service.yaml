@@ -16,13 +16,14 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: mate-collector
+  name: mate-api
   labels:
-    app: mate-collector
+    app: mate-api
 spec:
   ports:
   - port: 80
     name: web
+    targetPort: 8000
   clusterIP: None
   selector:
     app: mate-api

@@ -1,5 +1,5 @@
 use super::utils::*;
-use crate::models::{NewAccountBalancePayload, NewAccountPayload};
+use crate::models::{NewAccountBalancesPayload, NewAccountPayload, UpdateAccountPayload};
 use actix_web::{web, HttpRequest, Responder};
 
 // CREATE
@@ -53,9 +53,15 @@ pub async fn get_summary_all() -> impl Responder {
 }
 
 // UPDATE
-// curl -i -X PUT -d '{"account_id":1, "balance": 475.78}' -H 'Content-Type: application/json' http://localhost:8000/accounts/
-pub async fn update_balance(payload: web::Json<NewAccountBalancePayload>) -> impl Responder {
-    create_account_balance(&payload)
+// curl -i -X PUT -d '{"account_id":1, "name":"day trading account", "vendor": "tdameritrade", "client_key": "", "client_secret": ""}' -H 'Content-Type: application/json' http://localhost:8000/accounts/balance/
+pub async fn put_account(payload: web::Json<UpdateAccountPayload>) -> impl Responder {
+    update_account(&payload)
+}
+
+// UPDATE
+// curl -i -X PUT -d '{"balances": [{"account_id":1, "balance": 475.78},{"account_id":2, "balance": 4757.80}]' -H 'Content-Type: application/json' http://localhost:8000/accounts/balance/
+pub async fn update_balances(payload: web::Json<NewAccountBalancesPayload>) -> impl Responder {
+    update_account_balances(&payload)
 }
 
 // DELETE

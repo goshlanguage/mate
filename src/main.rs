@@ -46,7 +46,8 @@ impl Mate {
 
         for account in accounts {
             let new_account =
-                accounts::new_account(account.as_str(), account.as_str(), "", "", "").unwrap();
+                accounts::new_account(account.as_str(), account.as_str(), "", None, "", "")
+                    .unwrap();
             mate.accounts.push(new_account);
         }
 
@@ -68,7 +69,7 @@ impl Mate {
                     info!("Found TDAmeritrade Accounts: {}", account.get_account_ids())
                 }
                 AccountType::KrakenAccount(account) => {
-                    info!("Found Kraken Accounts: {}", account.get_account_balances());
+                    info!("Found Kraken Accounts: {}", account.get_account_balance());
                 }
             }
         }

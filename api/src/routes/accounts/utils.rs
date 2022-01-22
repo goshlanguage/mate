@@ -1,7 +1,9 @@
 use crate::diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use crate::establish_connection;
 use crate::models::*;
-use log::error;
+use log::{error, info};
+use magic_crypt::MagicCryptTrait;
+use std::env;
 
 // CREATE
 /// Creates an account and returns the stored model
@@ -10,46 +12,27 @@ pub fn create_account(new: &NewAccountPayload) -> Account {
 
     let connection = establish_connection();
 
+    let now = &chrono::Utc::now().naive_utc();
+
+    let encrypted_secret = encrypt(new.client_secret.to_string());
+
     // TODO
     // only store these values encrypted
     let new_account = NewAccount {
         name: &new.name,
         vendor: &new.vendor,
         client_key: &new.client_key,
-        client_secret: &new.client_secret,
-        created: &chrono::Utc::now().naive_utc(),
+        client_secret: encrypted_secret.as_str(),
+        created: now,
+        updated: now,
     };
 
     // TODO
     // catch and return error here perhaps
-    let mut result = diesel::insert_into(accounts::table)
+    diesel::insert_into(accounts::table)
         .values(new_account)
         .get_result::<Account>(&connection)
-        .expect("Error saving new account");
-
-    result.client_secret = "REDACTED".to_string();
-    result
-}
-
-// CREATE
-/// Creates an account and returns the stored model
-pub fn create_account_balance(new: &NewAccountBalancePayload) -> Balance {
-    use crate::schema::account_histories;
-
-    let connection = establish_connection();
-
-    let new_balance = NewAccountBalance {
-        account_id: &new.account_id,
-        balance: &new.balance,
-        updated: &chrono::Utc::now().naive_utc(),
-    };
-
-    // TODO
-    // catch and return error here perhaps
-    diesel::insert_into(account_histories::table)
-        .values(new_balance)
-        .get_result::<Balance>(&connection)
-        .expect("Error saving new account balance")
+        .expect("Error saving new account")
 }
 
 // READ Account Summaries
@@ -128,8 +111,8 @@ pub fn get_accounts() -> Accounts {
             id: account.id,
             name: account.name,
             vendor: account.vendor,
-            client_key: "REDACTED".to_string(),
-            client_secret: "REDACTED".to_string(),
+            client_key: account.client_key,
+            client_secret: account.client_secret,
             created: account.created,
             updated: account.updated,
         };
@@ -150,6 +133,59 @@ pub fn get_balances() -> Balances {
     let results = account_histories.load::<Balance>(&connection).unwrap();
 
     Balances { balances: results }
+}
+
+// Update
+/// Update an account and returns the stored model
+pub fn update_account(target: &UpdateAccountPayload) -> Account {
+    use crate::schema::accounts::dsl::*;
+
+    let connection = establish_connection();
+
+    let encrypted_secret = encrypt(target.client_secret.to_string());
+
+    // catch and return error here perhaps
+    diesel::update(accounts.filter(id.eq(target.id)))
+        .set((
+            name.eq(&target.name),
+            vendor.eq(&target.vendor),
+            client_key.eq(&target.client_key),
+            client_secret.eq(&encrypted_secret.as_str()),
+            updated.eq(Some(chrono::Utc::now().naive_utc())),
+        ))
+        .get_result::<Account>(&connection)
+        .expect("Account update failed, id")
+}
+
+// PUT
+/// Creates account balances if they don't exist and returns the stored models
+pub fn update_account_balances(new: &NewAccountBalancesPayload) -> Balances {
+    info!("NewAccountBalancesPayload: {:?}", new);
+    use crate::schema::account_histories;
+
+    let connection = establish_connection();
+    let updated = &chrono::Utc::now().naive_utc();
+
+    let mut balances = Vec::new();
+
+    for newb in &new.balances {
+        let new_balance = NewAccountBalance {
+            account_id: &newb.account_id,
+            balance: &newb.balance,
+            updated,
+        };
+
+        // TODO
+        // catch and return error here perhaps
+        balances.push(
+            diesel::insert_into(account_histories::table)
+                .values(new_balance)
+                .get_result::<Balance>(&connection)
+                .expect("Error saving new account balance"),
+        );
+    }
+
+    Balances { balances }
 }
 
 // DELETE
@@ -175,4 +211,18 @@ pub fn delete_account(rm_id: i32) -> Accounts {
     }
 
     get_accounts()
+}
+
+fn encrypt(input: String) -> String {
+    let salt = match env::var("MATE_SALT") {
+        Ok(val) => val,
+        Err(e) => panic!(
+            "Didn't find the MATE_SALT env var, please set this and try again. {}",
+            e
+        ),
+    };
+
+    let mc = new_magic_crypt!(salt, 256);
+
+    mc.encrypt_str_to_base64(input.as_str())
 }

@@ -106,9 +106,23 @@ pub struct NewAccountPayload {
 }
 
 #[derive(Deserialize)]
+pub struct UpdateAccountPayload {
+    pub id: i32,
+    pub name: String,
+    pub vendor: String,
+    pub client_key: String,
+    pub client_secret: String,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct NewAccountBalancePayload {
     pub account_id: i32,
     pub balance: f64,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct NewAccountBalancesPayload {
+    pub balances: Vec<NewAccountBalancePayload>,
 }
 
 // Insertable structs
@@ -121,6 +135,7 @@ pub struct NewAccount<'a> {
     pub client_key: &'a str,
     pub client_secret: &'a str,
     pub created: &'a chrono::NaiveDateTime,
+    pub updated: &'a chrono::NaiveDateTime,
 }
 
 #[derive(Insertable)]
