@@ -70,7 +70,7 @@ async fn main() -> std::io::Result<()> {
 
         App::new().wrap(cors).configure(routes::api_factory)
     })
-    .bind(format!("127.0.0.1:{}", port).as_str())?
+    .bind(format!("0.0.0.0:{}", port).as_str())?
     .workers(3)
     .run()
     .await
