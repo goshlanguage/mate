@@ -2,7 +2,8 @@ use clap::Parser;
 use log::info;
 use std::{thread, time::Duration};
 
-#[macro_use] extern crate magic_crypt;
+#[macro_use]
+extern crate magic_crypt;
 
 use matelog::init_logging;
 

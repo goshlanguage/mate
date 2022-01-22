@@ -1,5 +1,5 @@
-use log::{error, info};
 use crate::magic_crypt::MagicCryptTrait;
+use log::{error, info};
 extern crate num_traits;
 use num_traits::cast::ToPrimitive;
 use serde::{Deserialize, Serialize};
@@ -164,13 +164,15 @@ impl Collector {
                     // if the API is enabled, post data
                     if self.conf.api_host.is_some() {
                         let api_client = Client {
-                            api_host: get_api_host(self.conf.api_host.as_ref().unwrap().to_string()),
+                            api_host: get_api_host(
+                                self.conf.api_host.as_ref().unwrap().to_string(),
+                            ),
                         };
-                        match api_client.submit_account_balances(payload){
+                        match api_client.submit_account_balances(payload) {
                             Ok(_) => (),
                             Err(e) => {
                                 error!("account balance to API failed: {}", e.to_string());
-                            },
+                            }
                         };
                     }
 
@@ -189,14 +191,16 @@ impl Collector {
 
                         let payload = self.poll_kraken_balance(account, db_id);
                         let api_client = Client {
-                            api_host: get_api_host(self.conf.api_host.as_ref().unwrap().to_string()),
+                            api_host: get_api_host(
+                                self.conf.api_host.as_ref().unwrap().to_string(),
+                            ),
                         };
 
-                        match api_client.submit_account_balances(payload){
+                        match api_client.submit_account_balances(payload) {
                             Ok(_) => (),
                             Err(e) => {
                                 error!("account balance to API failed: {}", e.to_string());
-                            },
+                            }
                         };
                     }
 
