@@ -79,11 +79,26 @@ spec:
             secretKeyRef:
               name: mate-postgresql
               key: postgresql-password
+        - name: MATE_SALT
+          {{- if .Values.salt.existingSecret }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.salt.existingSecret }}
+              key: salt
+          {{- else }}
+          valueFrom:
+            secretKeyRef:
+              name: mate-salt
+              key: salt
+          {{- end }}
         {{- if eq .Values.env "staging" }}
         imagePullPolicy: Always
         {{- else }}
         imagePullPolicy: IfNotPresent
         {{- end }}
+        ports:
+        - name: web
+          containerPort: 8000
       imagePullSecrets:
       - name: regcred
 {{- end }}

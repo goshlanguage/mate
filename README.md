@@ -110,3 +110,4 @@ The following references may be helpful for the underlying technologies used in 
 |            | | [query DSL](http://docs.diesel.rs/diesel/query_dsl/trait.QueryDsl.html)          |
 | krakenrs   | client api                                                                       | [cargo docs](https://docs.rs/krakenrs/5.2.2/krakenrs/)                                                                 |
 |            | | [crates.io](https://crates.io/crates/krakenrs)                                   |
+| magic-crypt | encryption library | [docs.rs](https://docs.rs/magic-crypt/latest/magic_crypt/) |

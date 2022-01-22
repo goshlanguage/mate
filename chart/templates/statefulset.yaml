@@ -54,12 +54,29 @@ spec:
         - -c
         - {{ . }}
         {{- end }}
+        {{- if .Values.collector.api.enabled }}
+        - --api-host
+        - {{ .Values.collector.api.api_host }}
+        {{- end }}
         {{- if .Values.s3.enabled }}
         - --s3-bucket
         - {{ .Values.s3.bucketName }}
         - --s3-proto
         - {{ .Values.s3.proto }}
         {{- end }}
+        env:
+        - name: MATE_SALT
+          {{- if .Values.salt.existingSecret }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.salt.existingSecret }}
+              key: salt
+          {{- else }}
+          valueFrom:
+            secretKeyRef:
+              name: mate-salt
+              key: salt
+          {{- end }}
         image: "{{ .Values.image.repo }}:{{ .Values.image.tag }}"
         {{- if eq .Values.env "staging" }}
         imagePullPolicy: Always

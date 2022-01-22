@@ -28,8 +28,21 @@ api:
   debug: true
 
 collector:
+  api:
+    enabled: true
+    api_host: http://mate-api
   enabled: true
   debug: true
+  salt:
+    # Uncomment and add your text hash here to automatically propagate a secret and mount it
+    # value: my-hash-salt
+    value:
+
+    # existingSecret expects a key `salt` to be present in the secret
+    #
+    # You can create this secret in your namespace with:
+    # kubectl create secret generic mate-salt --from-literal=salt=$(openssl rand -hex 16)
+    existingSecret: mate-salt
 
   persistence:
     enabled: true
@@ -65,6 +78,9 @@ postgresql:
   image:
     repository: arm64v8/postgres
     tag: bullseye
+
+salt:
+  existingSecret: mate-salt
 
 s3:
   enabled: true
