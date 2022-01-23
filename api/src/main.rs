@@ -1,6 +1,8 @@
 #[macro_use]
 extern crate diesel;
 #[macro_use]
+extern crate diesel_migrations;
+#[macro_use]
 extern crate magic_crypt;
 
 pub mod models;
@@ -12,6 +14,7 @@ use actix_web::{http::header, App, HttpServer};
 use clap::Parser;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
+use log::info;
 use matelog::init_logging;
 use std::env;
 
@@ -42,6 +45,8 @@ struct Args {
     verbose: usize,
 }
 
+embed_migrations!("./migrations/");
+
 #[actix_rt::main]
 async fn main() -> std::io::Result<()> {
     let args = Args::parse();
@@ -64,6 +69,10 @@ async fn main() -> std::io::Result<()> {
             env::set_var("DATABASE_URL", psql_conn_string);
         }
     }
+
+    info!("Running any pending database migrations");
+    let conn = establish_connection();
+    embedded_migrations::run_with_output(&conn, &mut std::io::stdout()).unwrap();
 
     HttpServer::new(move || {
         let cors = get_cors_policy();

@@ -26,6 +26,7 @@ bytes = "1"
 clap = { version = "^3.0.0-rc.11", features = ["derive", "env"] }
 chrono = { version = "0.4", features = [ "serde" ] }
 diesel = { version = "1.4.4", features = [ "chrono", "postgres" ] }
+diesel_migrations = { version = "1.4.0", features = [ "postgres" ]}
 futures = "0.3.5"
 log = "~0.4.14"
 magic-crypt = "3.1"
