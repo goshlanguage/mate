@@ -23,8 +23,10 @@ spec:
   ports:
   - port: 80
     name: web
+    protocol: TCP
     targetPort: 8000
-  clusterIP: None
   selector:
     app: mate-api
+  sessionAffinity: ClientIP
+  type: ClusterIP
 {{- end }}
