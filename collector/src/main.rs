@@ -27,6 +27,9 @@ struct Args {
     #[clap(long)]
     api_host: Option<String>,
 
+    #[clap(long, env = "AUTHORITY", default_value = "")]
+    authority: String,
+
     #[clap(long)]
     s3_bucket: Option<String>,
 
@@ -41,6 +44,12 @@ struct Args {
 
     #[clap(long)]
     filepath: Option<String>,
+
+    #[clap(long, env = "MATE_CLIENT_ID", default_value = "")]
+    mate_client_id: String,
+
+    #[clap(long, env = "MATE_CLIENT_SECRET", default_value = "")]
+    mate_client_secret: String,
 
     #[clap(short, long, default_value_t = 3600)]
     poll_seconds: u64,

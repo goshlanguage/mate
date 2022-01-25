@@ -102,7 +102,7 @@ impl Collector {
 
                 info!("API Host: {}", &api_host);
 
-                let api_client = Client { api_host };
+                let api_client = Client::new(api_host);
                 let accounts: Accounts = match api_client.get_accounts() {
                     Ok(a) => a,
                     Err(e) => {
@@ -163,11 +163,9 @@ impl Collector {
 
                     // if the API is enabled, post data
                     if self.conf.api_host.is_some() {
-                        let api_client = Client {
-                            api_host: get_api_host(
-                                self.conf.api_host.as_ref().unwrap().to_string(),
-                            ),
-                        };
+                        let api_host = get_api_host(self.conf.api_host.as_ref().unwrap().to_string());
+                        let api_client = Client::new(api_host);
+
                         match api_client.submit_account_balances(payload) {
                             Ok(_) => (),
                             Err(e) => {
@@ -190,11 +188,9 @@ impl Collector {
                         }
 
                         let payload = self.poll_kraken_balance(account, db_id);
-                        let api_client = Client {
-                            api_host: get_api_host(
-                                self.conf.api_host.as_ref().unwrap().to_string(),
-                            ),
-                        };
+
+                        let api_host = get_api_host(self.conf.api_host.as_ref().unwrap().to_string());
+                        let api_client = Client::new(api_host);
 
                         match api_client.submit_account_balances(payload) {
                             Ok(_) => (),

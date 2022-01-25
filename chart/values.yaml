@@ -27,6 +27,9 @@ api:
   enabled: true
   debug: true
 
+  oauth2:
+    authority:
+
 collector:
   api:
     enabled: true

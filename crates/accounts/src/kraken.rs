@@ -1,11 +1,11 @@
 use super::traits::get::Get;
 use super::types::*;
 use krakenrs::{KrakenCredentials, KrakenRestAPI, KrakenRestConfig};
-use log::info;
+use log::{error, info};
 use rust_decimal::prelude::*;
 use rust_decimal_macros::dec;
 use serde_json::{json, Map, Value};
-use std::{convert::TryFrom, time::Duration};
+use std::{collections::HashMap, convert::TryFrom, time::Duration};
 
 /// # KrakenAccount
 ///  KrakenAccount represents an exchange account
@@ -74,7 +74,12 @@ impl KrakenAccount {
 
     pub fn get_account_balance(&self) -> Decimal {
         let mut balance = dec!(0.0);
-        let balances = self.client().get_account_balance().unwrap();
+        let mut balances = HashMap::new();
+
+        match self.client().get_account_balance(){
+            Ok(b) => balances = b,
+            Err(e) => error!("{}", e),
+        };
 
         info!("Found account balances for: {:?}", balances.keys());
         for key in balances.keys() {

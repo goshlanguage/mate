@@ -12,10 +12,10 @@ pub mod schema;
 
 use actix_cors::Cors;
 use actix_web::{dev::ServiceRequest, Error};
+use actix_web::{http::header, App, HttpServer};
 use actix_web_httpauth::extractors::bearer::{BearerAuth, Config};
 use actix_web_httpauth::extractors::AuthenticationError;
 use actix_web_httpauth::middleware::HttpAuthentication;
-use actix_web::{http::header, App, HttpServer};
 use clap::Parser;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
@@ -79,15 +79,14 @@ async fn main() -> std::io::Result<()> {
     let conn = establish_connection();
     embedded_migrations::run_with_output(&conn, &mut std::io::stdout()).unwrap();
 
-
     HttpServer::new(move || {
         let auth = HttpAuthentication::bearer(validator);
         let cors = get_cors_policy();
 
         App::new()
-        .wrap(auth)
-        .wrap(cors)
-        .configure(routes::api_factory)
+            .wrap(auth)
+            .wrap(cors)
+            .configure(routes::api_factory)
     })
     .bind(format!("0.0.0.0:{}", port).as_str())?
     .workers(3)
