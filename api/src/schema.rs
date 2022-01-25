@@ -19,6 +19,20 @@ table! {
     }
 }
 
+table! {
+    users (id) {
+        id -> Int4,
+        first_name -> Text,
+        last_name -> Text,
+        email -> Text,
+        created -> Timestamp,
+    }
+}
+
 joinable!(account_histories -> accounts (account_id));
 
-allow_tables_to_appear_in_same_query!(account_histories, accounts,);
+allow_tables_to_appear_in_same_query!(
+    account_histories,
+    accounts,
+    users,
+);

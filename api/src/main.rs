@@ -5,18 +5,23 @@ extern crate diesel_migrations;
 #[macro_use]
 extern crate magic_crypt;
 
+mod auth;
 pub mod models;
 mod routes;
 pub mod schema;
 
 use actix_cors::Cors;
+use actix_web::{dev::ServiceRequest, Error};
+use actix_web_httpauth::extractors::bearer::{BearerAuth, Config};
+use actix_web_httpauth::extractors::AuthenticationError;
+use actix_web_httpauth::middleware::HttpAuthentication;
 use actix_web::{http::header, App, HttpServer};
 use clap::Parser;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use log::info;
 use matelog::init_logging;
-use std::env;
+use std::{env, pin::Pin};
 
 /// You can see the spec for clap's arg attributes here:
 ///      <https://github.com/clap-rs/clap/blob/v3.0.0-rc.11/examples/derive_ref/README.md#arg-attributes>
@@ -74,10 +79,15 @@ async fn main() -> std::io::Result<()> {
     let conn = establish_connection();
     embedded_migrations::run_with_output(&conn, &mut std::io::stdout()).unwrap();
 
+
     HttpServer::new(move || {
+        let auth = HttpAuthentication::bearer(validator);
         let cors = get_cors_policy();
 
-        App::new().wrap(cors).configure(routes::api_factory)
+        App::new()
+        .wrap(auth)
+        .wrap(cors)
+        .configure(routes::api_factory)
     })
     .bind(format!("0.0.0.0:{}", port).as_str())?
     .workers(3)
@@ -106,5 +116,25 @@ pub fn get_cors_policy() -> Cors {
             .allowed_headers(vec![header::AUTHORIZATION, header::ACCEPT])
             .allowed_header(header::CONTENT_TYPE)
             .max_age(3600)
+    }
+}
+
+// validator takes an incoming request and it's token in the Authorization header, and returns the request
+// for any downstream middlewares, and any errors
+// errors will throw a 401
+async fn validator(req: ServiceRequest, credentials: BearerAuth) -> Result<ServiceRequest, Error> {
+    let config = req
+        .app_data::<Config>()
+        .map(|data| Pin::new(data).get_ref().clone())
+        .unwrap_or_else(Default::default);
+    match auth::validate_token(credentials.token()) {
+        Ok(res) => {
+            if res == true {
+                Ok(req)
+            } else {
+                Err(AuthenticationError::from(config).into())
+            }
+        }
+        Err(_) => Err(AuthenticationError::from(config).into()),
     }
 }

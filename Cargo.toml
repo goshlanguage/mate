@@ -20,11 +20,14 @@ accounts = {path = "./crates/accounts", version = "0.1.0"}
 actix-cors = "0.5.4"
 actix-rt = "1"
 actix-web = "3.3"
+actix-web-httpauth = "0.5.1"
+alcoholic_jwt = "1.0.1"
 async-std = "1.6.3"
 async-trait = "0.1"
 bytes = "1"
 clap = { version = "^3.0.0-rc.11", features = ["derive", "env"] }
 chrono = { version = "0.4", features = [ "serde" ] }
+derive_more = "0.99.17"
 diesel = { version = "1.4.4", features = [ "chrono", "postgres" ] }
 diesel_migrations = { version = "1.4.0", features = [ "postgres" ]}
 futures = "0.3.5"
