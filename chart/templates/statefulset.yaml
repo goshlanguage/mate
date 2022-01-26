@@ -65,6 +65,8 @@ spec:
         - {{ .Values.s3.proto }}
         {{- end }}
         env:
+        - name: AUTHORITY
+          value: {{ .Values.oauth2.authority }}
         - name: MATE_SALT
           {{- if .Values.salt.existingSecret }}
           valueFrom:
@@ -83,8 +85,10 @@ spec:
         {{- else }}
         imagePullPolicy: IfNotPresent
         {{- end }}
-        {{- if or .Values.accounts.tdameritrade.enabled .Values.accounts.kraken.enabled }}
         envFrom:
+        - secretRef:
+            name: {{ .Values.collector.clientCreds.existingSecret }}
+        {{- if or .Values.accounts.tdameritrade.enabled .Values.accounts.kraken.enabled }}
         {{- if .Values.accounts.tdameritrade.enabled }}
         - secretRef:
             name: {{ .Values.accounts.tdameritrade.existingSecret }}

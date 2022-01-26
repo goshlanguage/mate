@@ -27,13 +27,21 @@ api:
   enabled: true
   debug: true
 
-  oauth2:
-    authority:
+  ingress:
+    enabled: false
+    clusterIssuer: letsencrypt-prod
+    # hostname: my.website.com
+    # tlsSecret: my-secret
+
 
 collector:
   api:
     enabled: true
     api_host: http://mate-api
+  # MATE needs the oauth2 creds to exist in a secret. This secret can be created with:
+  # kubectl create secret generic mate-client-creds --from-literal=MATE_CLIENT_ID=<id> --from-literal=MATE_CLIENT_KEY=<key> --from-literal=MATE_CLIENT_SECRET=<secret>
+  clientCreds:
+    existingSecret: mate-client-creds
   enabled: true
   debug: true
   salt:
@@ -73,6 +81,9 @@ collector:
 
   pollDuration: 60
   filepath: /data
+
+oauth2:
+  authority:
 
 postgresql:
   enabled: true

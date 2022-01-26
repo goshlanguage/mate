@@ -74,6 +74,8 @@ spec:
         env:
         - name: ENV
           value: {{ .Values.env }}
+        - name: AUTHORITY
+          value: {{ .Values.oauth2.authority }}
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
