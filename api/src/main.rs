@@ -106,7 +106,7 @@ pub fn get_cors_policy() -> Cors {
         Err(_) => "staging".to_string(),
     };
 
-    let allowed_origin_wildcare = match env::var("ALLOWED_ORIGIN") {
+    let allowed_origin_wildcard = match env::var("ALLOWED_ORIGIN_DOMAIN") {
         Ok(v) => v,
         Err(_) => "".to_string(),
     };
@@ -114,11 +114,20 @@ pub fn get_cors_policy() -> Cors {
     if env != *"prod" {
         Cors::permissive()
     } else {
+        if allowed_origin_wildcard != "" {
+            return Cors::default()
+                .allowed_origin("http://mate.default.svc.cluster.local")
+                .allowed_origin_fn(move |origin, _req_head| {
+                    origin.as_bytes().ends_with(allowed_origin_wildcard.as_bytes())
+                })
+                .allowed_methods(vec!["GET", "POST", "PUT", "DELETE"])
+                .allowed_headers(vec![header::AUTHORIZATION, header::ACCEPT])
+                .allowed_header(header::CONTENT_TYPE)
+                .max_age(3600)
+        }
+
         Cors::default()
             .allowed_origin("http://mate.default.svc.cluster.local")
-            .allowed_origin_fn(|origin, _req_head| {
-                origin.as_bytes().ends_with(b".rust-lang.org")
-            })
             .allowed_methods(vec!["GET", "POST", "PUT", "DELETE"])
             .allowed_headers(vec![header::AUTHORIZATION, header::ACCEPT])
             .allowed_header(header::CONTENT_TYPE)
