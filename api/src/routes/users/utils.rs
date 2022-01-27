@@ -1,8 +1,6 @@
 use crate::diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use crate::establish_connection;
 use crate::models::*;
-use actix_web::{Error, HttpResponse, Responder};
-use log::error;
 
 // CREATE ID
 /// Returns user associated with the given id

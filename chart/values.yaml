@@ -24,6 +24,7 @@ accounts:
     existingSecret: kraken-creds
 
 api:
+  allowedOriginDomain: ""
   enabled: true
   debug: true
 

@@ -16,6 +16,7 @@ use accounts::types::AccountType;
 #[path = "./state/mod.rs"]
 mod state;
 use state::{api::*, file::*, s3::S3};
+use crate::state::api::types::Auth;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Account {
@@ -52,6 +53,7 @@ pub struct CollectorConfig {
     pub api_host: Option<String>,
     pub crypto_watchlist: Vec<String>,
     pub filepath: Option<String>,
+    pub last_auth: Auth,
     pub poll_seconds: u64,
     pub s3_bucket: String,
     pub s3_proto: String,

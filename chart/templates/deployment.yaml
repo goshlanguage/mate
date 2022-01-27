@@ -76,6 +76,8 @@ spec:
           value: {{ .Values.env }}
         - name: AUTHORITY
           value: {{ .Values.oauth2.authority }}
+        - name: ALLOWED_ORIGIN_DOMAIN
+          value: {{ .Values.api.allowedOriginDomain }}
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:

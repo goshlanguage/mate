@@ -10,6 +10,9 @@ use matelog::init_logging;
 mod types;
 use types::{Collector, CollectorConfig};
 
+mod state;
+use crate::state::api::types::Auth;
+
 /// You can see the spec for clap's arg attributes here:
 ///      <https://github.com/clap-rs/clap/blob/v3.0.0-rc.11/examples/derive_ref/README.md#arg-attributes>
 #[derive(Parser, Debug)]
@@ -73,12 +76,13 @@ fn init(args: Args) -> Collector {
         accounts: args.accounts,
         api_host: args.api_host,
         crypto_watchlist: args.crypto,
+        filepath: args.filepath,
+        last_auth: Auth::new(),
         poll_seconds: args.poll_seconds,
         s3_bucket: bucket,
         s3_proto: args.s3_proto,
         s3_region: args.s3_region,
         stock_watchlist: args.stock,
-        filepath: args.filepath,
     };
 
     Collector::new(conf)
