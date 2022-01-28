@@ -76,7 +76,7 @@ impl KrakenAccount {
         let mut balance = dec!(0.0);
         let mut balances = HashMap::new();
 
-        match self.client().get_account_balance(){
+        match self.client().get_account_balance() {
             Ok(b) => balances = b,
             Err(e) => error!("{}", e),
         };

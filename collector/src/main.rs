@@ -11,7 +11,7 @@ mod types;
 use types::{Collector, CollectorConfig};
 
 mod state;
-use crate::state::api::types::Auth;
+use state::api::types::Auth;
 
 /// You can see the spec for clap's arg attributes here:
 ///      <https://github.com/clap-rs/clap/blob/v3.0.0-rc.11/examples/derive_ref/README.md#arg-attributes>

@@ -114,16 +114,18 @@ pub fn get_cors_policy() -> Cors {
     if env != *"prod" {
         Cors::permissive()
     } else {
-        if allowed_origin_wildcard != "" {
+        if !allowed_origin_wildcard.is_empty() {
             return Cors::default()
                 .allowed_origin("http://mate.default.svc.cluster.local")
                 .allowed_origin_fn(move |origin, _req_head| {
-                    origin.as_bytes().ends_with(allowed_origin_wildcard.as_bytes())
+                    origin
+                        .as_bytes()
+                        .ends_with(allowed_origin_wildcard.as_bytes())
                 })
                 .allowed_methods(vec!["GET", "POST", "PUT", "DELETE"])
                 .allowed_headers(vec![header::AUTHORIZATION, header::ACCEPT])
                 .allowed_header(header::CONTENT_TYPE)
-                .max_age(3600)
+                .max_age(3600);
         }
 
         Cors::default()
@@ -145,7 +147,7 @@ async fn validator(req: ServiceRequest, credentials: BearerAuth) -> Result<Servi
         .unwrap_or_else(Default::default);
     match auth::validate_token(credentials.token()) {
         Ok(res) => {
-            if res == true {
+            if res {
                 Ok(req)
             } else {
                 Err(AuthenticationError::from(config).into())

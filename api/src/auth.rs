@@ -19,7 +19,7 @@ pub fn validate_token(token: &str) -> Result<bool, ServiceError> {
     ))
     .expect("failed to fetch jwks");
     let validations = vec![Validation::Issuer(authority), Validation::SubjectPresent];
-    let kid = match token_kid(&token) {
+    let kid = match token_kid(token) {
         Ok(res) => res.expect("failed to decode kid"),
         Err(_) => return Err(ServiceError::JWKSFetchError),
     };
@@ -31,5 +31,5 @@ pub fn validate_token(token: &str) -> Result<bool, ServiceError> {
 fn fetch_jwks(uri: &str) -> Result<JWKS, Box<dyn Error>> {
     let res = reqwest::blocking::get(uri).unwrap();
     let val = res.json::<JWKS>()?;
-    return Ok(val);
+    Ok(val)
 }

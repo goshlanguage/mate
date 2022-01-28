@@ -12,6 +12,7 @@ pub struct S3 {
 }
 
 impl S3 {
+    #[allow(dead_code)]
     pub fn new(name: String, proto: String, region: String) -> S3 {
         let s3_endpoint = match env::var("BUCKET_HOST") {
             Ok(val) => val,
@@ -34,6 +35,7 @@ impl S3 {
         }
     }
 
+    #[allow(dead_code)]
     pub fn default() -> S3 {
         S3 {
             bucket_name: "".to_string(),
@@ -57,6 +59,7 @@ impl S3 {
         .unwrap()
     }
 
+    #[allow(dead_code)]
     pub fn save(&self, filepath: String, data: String) {
         let path = filepath;
         let bucket = self.bucket();

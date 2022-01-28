@@ -27,5 +27,5 @@ pub async fn delete_user(req: HttpRequest) -> impl Responder {
         .unwrap();
 
     delete(id);
-    format!("ok")
+    "ok".to_string()
 }

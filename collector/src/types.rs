@@ -11,12 +11,10 @@ use accounts::kraken::KrakenAccount;
 use accounts::tdameritrade::TDAmeritradeAccount;
 use accounts::types::AccountType;
 
-/// TODO
-///   Fix this broken module situation
-#[path = "./state/mod.rs"]
-mod state;
-use state::{api::*, file::*, s3::S3};
-use crate::state::api::types::Auth;
+use crate::state::api;
+use crate::state::file::*;
+use crate::state::s3::S3;
+use crate::Auth;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Account {
@@ -46,6 +44,7 @@ pub struct Collector {
     pub accounts: Vec<AccountType>,
     pub bucket: S3,
     pub conf: CollectorConfig,
+    pub client: Option<api::Client>,
 }
 
 pub struct CollectorConfig {
@@ -71,6 +70,7 @@ impl Collector {
             accounts: Vec::new(),
             bucket,
             conf,
+            client: None,
         };
 
         if !&collector.conf.s3_bucket.is_empty() {
@@ -90,21 +90,10 @@ impl Collector {
             Some(host) => {
                 info!("Configuring accounts from the API");
 
-                let mut api_host = host.to_string();
-
-                // ensure the host string doesn't end in / or normalize the string
-                let last_char = &host.to_string().pop().unwrap();
-                let slash = "/".chars().next().unwrap();
-                if last_char == &slash {
-                    api_host = host.to_string();
-                    api_host.truncate(api_host.len() - 1);
-                }
-
-                collector.conf.api_host = Some(api_host.to_string());
-
+                let api_host = get_api_host(host.to_string());
                 info!("API Host: {}", &api_host);
 
-                let api_client = Client::new(api_host);
+                let api_client = api::Client::new(api_host);
                 let accounts: Accounts = match api_client.get_accounts() {
                     Ok(a) => a,
                     Err(e) => {
@@ -164,11 +153,9 @@ impl Collector {
                     let payload = self.poll_td_balance(account, db_id);
 
                     // if the API is enabled, post data
-                    if self.conf.api_host.is_some() {
-                        let api_host = get_api_host(self.conf.api_host.as_ref().unwrap().to_string());
-                        let api_client = Client::new(api_host);
-
-                        match api_client.submit_account_balances(payload) {
+                    if self.client.is_some() {
+                        let client = self.client.clone().unwrap();
+                        match client.submit_account_balances(payload) {
                             Ok(_) => (),
                             Err(e) => {
                                 error!("account balance to API failed: {}", e.to_string());
@@ -183,7 +170,7 @@ impl Collector {
                     info!("Collecting Kraken balance data");
 
                     // if API is enabled, post data
-                    if self.conf.api_host.is_some() {
+                    if self.client.is_some() {
                         let mut db_id = 0;
                         if !&account.database_id.is_none() {
                             db_id = account.database_id.unwrap();
@@ -191,10 +178,8 @@ impl Collector {
 
                         let payload = self.poll_kraken_balance(account, db_id);
 
-                        let api_host = get_api_host(self.conf.api_host.as_ref().unwrap().to_string());
-                        let api_client = Client::new(api_host);
-
-                        match api_client.submit_account_balances(payload) {
+                        let client = self.client.clone().unwrap();
+                        match client.submit_account_balances(payload) {
                             Ok(_) => (),
                             Err(e) => {
                                 error!("account balance to API failed: {}", e.to_string());

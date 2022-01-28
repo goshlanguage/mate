@@ -52,5 +52,5 @@ pub fn delete(user_id: i32) -> String {
     diesel::delete(users.filter(id.eq(user_id)))
         .execute(&connection)
         .unwrap();
-    format!("ok")
+    "ok".to_string()
 }
