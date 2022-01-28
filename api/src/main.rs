@@ -106,35 +106,21 @@ pub fn get_cors_policy() -> Cors {
         Err(_) => "staging".to_string(),
     };
 
-    let allowed_origin_wildcard = match env::var("ALLOWED_ORIGIN_DOMAIN") {
-        Ok(v) => v,
-        Err(_) => "".to_string(),
-    };
+    let mut cors = Cors::permissive();
 
-    if env != *"prod" {
-        Cors::permissive()
-    } else {
-        if !allowed_origin_wildcard.is_empty() {
-            return Cors::default()
-                .allowed_origin("http://mate.default.svc.cluster.local")
-                .allowed_origin_fn(move |origin, _req_head| {
-                    origin
-                        .as_bytes()
-                        .ends_with(allowed_origin_wildcard.as_bytes())
-                })
-                .allowed_methods(vec!["GET", "POST", "PUT", "DELETE"])
-                .allowed_headers(vec![header::AUTHORIZATION, header::ACCEPT])
-                .allowed_header(header::CONTENT_TYPE)
-                .max_age(3600);
-        }
+    if env == *"prod" {
+        let allowed_origin = match env::var("ALLOWED_ORIGIN") {
+            Ok(v) => v,
+            Err(_) => "http://localhost:3000".to_string(),
+        };
 
-        Cors::default()
-            .allowed_origin("http://mate.default.svc.cluster.local")
-            .allowed_methods(vec!["GET", "POST", "PUT", "DELETE"])
-            .allowed_headers(vec![header::AUTHORIZATION, header::ACCEPT])
-            .allowed_header(header::CONTENT_TYPE)
-            .max_age(3600)
+        info!("configuring cors origin from env");
+        cors = Cors::default()
+            .allowed_origin(&allowed_origin)
+            .max_age(3600);
     }
+
+    cors
 }
 
 // validator takes an incoming request and it's token in the Authorization header, and returns the request

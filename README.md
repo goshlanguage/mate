@@ -6,7 +6,7 @@
 
 I am writing this to learn more about algorithmic trading, and quantitative finance.
 
-Mate supports the following account types:
+Mate supports the following brokerages and exchages:
 
 | Account Type  | Description                                                                                                                                                                |
 | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
